@@ -73,10 +73,46 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
+# In serverless environments (like Vercel), use /tmp directory which is writable
+# Note: /tmp is ephemeral - data may be cleared between invocations
+def is_serverless_environment():
+    """Detect if we're running in a serverless/read-only filesystem environment."""
+    # Check environment variables
+    if os.environ.get('VERCEL', '').lower() == '1':
+        return True
+    if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None:
+        return True
+    
+    # Check if BASE_DIR is in a serverless path
+    base_dir_str = str(BASE_DIR)
+    if '/var/task' in base_dir_str or '/var/runtime' in base_dir_str:
+        return True
+    
+    # Try to write to a test file to check filesystem permissions
+    try:
+        test_file_path = BASE_DIR / '.write_test'
+        with open(test_file_path, 'w') as f:
+            f.write('test')
+        os.remove(test_file_path)
+        return False  # Filesystem is writable
+    except (OSError, PermissionError, IOError):
+        return True  # Filesystem is read-only
+
+IS_SERVERLESS = is_serverless_environment()
+
+# Configure database path based on environment
+if IS_SERVERLESS:
+    # In serverless, use /tmp directory which is writable
+    # Note: /tmp is ephemeral - data persists only during the function execution
+    db_path = '/tmp/db.sqlite3'
+else:
+    # In local development, use project directory
+    db_path = str(BASE_DIR / 'db.sqlite3')
+
 DATABASES = {
     'default': env.db(
         'DATABASE_URL',
-        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3')
+        default=f'sqlite:///{db_path}'
     )
 }
 
@@ -159,32 +195,7 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
 
 # Logging
-# Detect if we're in a serverless environment (read-only filesystem)
-# Check multiple indicators of serverless environments
-def is_serverless_environment():
-    """Detect if we're running in a serverless/read-only filesystem environment."""
-    # Check environment variables
-    if os.environ.get('VERCEL', '').lower() == '1':
-        return True
-    if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None:
-        return True
-    
-    # Check if BASE_DIR is in a serverless path
-    base_dir_str = str(BASE_DIR)
-    if '/var/task' in base_dir_str or '/var/runtime' in base_dir_str:
-        return True
-    
-    # Try to write to a test file to check filesystem permissions
-    try:
-        test_file_path = BASE_DIR / '.write_test'
-        with open(test_file_path, 'w') as f:
-            f.write('test')
-        os.remove(test_file_path)
-        return False  # Filesystem is writable
-    except (OSError, PermissionError, IOError):
-        return True  # Filesystem is read-only
-
-IS_SERVERLESS = is_serverless_environment()
+# Use the IS_SERVERLESS variable already defined above
 
 logging_handlers = {
     'console': {
