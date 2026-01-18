@@ -159,6 +159,33 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
 
 # Logging
+# Detect if we're in a serverless environment (read-only filesystem)
+# Check multiple indicators of serverless environments
+def is_serverless_environment():
+    """Detect if we're running in a serverless/read-only filesystem environment."""
+    # Check environment variables
+    if os.environ.get('VERCEL', '').lower() == '1':
+        return True
+    if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None:
+        return True
+    
+    # Check if BASE_DIR is in a serverless path
+    base_dir_str = str(BASE_DIR)
+    if '/var/task' in base_dir_str or '/var/runtime' in base_dir_str:
+        return True
+    
+    # Try to write to a test file to check filesystem permissions
+    try:
+        test_file_path = BASE_DIR / '.write_test'
+        with open(test_file_path, 'w') as f:
+            f.write('test')
+        os.remove(test_file_path)
+        return False  # Filesystem is writable
+    except (OSError, PermissionError, IOError):
+        return True  # Filesystem is read-only
+
+IS_SERVERLESS = is_serverless_environment()
+
 logging_handlers = {
     'console': {
         'class': 'logging.StreamHandler',
@@ -166,12 +193,34 @@ logging_handlers = {
     },
 }
 
-if DEBUG:
-    logging_handlers['file'] = {
-        'class': 'logging.FileHandler',
-        'filename': BASE_DIR / 'gestures.log',
-        'formatter': 'verbose',
-    }
+# Only add file handler if not in serverless environment and DEBUG is True
+# In serverless environments, filesystem is read-only, so we can't write log files
+# NEVER add file handler in serverless environments, regardless of DEBUG setting
+if not IS_SERVERLESS and DEBUG:
+    try:
+        # Test if we can write to the log file location
+        log_file = BASE_DIR / 'gestures.log'
+        # Try to create/append to the file to verify write permissions
+        with open(log_file, 'a') as test_file:
+            pass
+        # Only add if we successfully tested write access
+        logging_handlers['file'] = {
+            'class': 'logging.FileHandler',
+            'filename': str(log_file),
+            'formatter': 'verbose',
+        }
+    except (OSError, PermissionError, IOError):
+        # If we can't write, just skip file logging
+        pass
+
+# Final safety check: remove file handler if we're in serverless (shouldn't happen, but be safe)
+if IS_SERVERLESS and 'file' in logging_handlers:
+    del logging_handlers['file']
+
+# Build handlers list for root logger - only include handlers that exist
+root_handlers = ['console']
+if 'file' in logging_handlers:
+    root_handlers.append('file')
 
 LOGGING = {
     'version': 1,
@@ -184,7 +233,7 @@ LOGGING = {
     },
     'handlers': logging_handlers,
     'root': {
-        'handlers': ['console', 'file'] if DEBUG else ['console'],
+        'handlers': root_handlers,
         'level': env('LOG_LEVEL', default='INFO'),
     },
 }
