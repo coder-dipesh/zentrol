@@ -35,4 +35,13 @@ htmlcov/
 # Static files (generated)
 staticfiles/
 
-vercel.json
+# Vercel (uncomment if you don't want to commit vercel.json)
+# vercel.json
+
+
+DEPLOYMENT.md
+PRODUCTION_READY.md
+
+
+# Logs
+*.log

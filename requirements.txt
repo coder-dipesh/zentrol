@@ -28,6 +28,9 @@ djangorestframework==3.14.0
 # CORS support for cross-origin requests
 django-cors-headers==4.3.1
 
+# Static files serving for production (required for Vercel)
+whitenoise==6.7.0
+
 # Environment variable management
 django-environ==0.11.2
 python-dotenv==1.0.1
