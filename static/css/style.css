@@ -1,0 +1,281 @@
+/* Essential CSS Only - Complex selectors and animations that can't be done with Tailwind */
+
+/* Reveal.js integration - must keep for proper slide display */
+#presentation-container .reveal {
+    height: calc(100vh - 50px);
+    margin-top: 0;
+    width: 100%; /* Use full width of presentation container (which already accounts for camera) */
+    overflow: hidden; /* Prevent overflow */
+}
+
+#presentation-container .reveal .slides {
+    height: 100%;
+    width: 100%;
+    overflow: hidden; /* Prevent overflow */
+}
+
+#presentation-container .reveal .slides section {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box;
+    overflow: hidden; /* Prevent overflow */
+}
+
+#presentation-container .reveal .slides section img {
+    max-width: calc(100% - 40px) !important;
+    max-height: calc(100% - 40px) !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    background: #fff;
+    padding: 0;
+    margin: 20px;
+}
+
+/* Fullscreen specific styles - Real Fullscreen API */
+:-webkit-full-screen #presentation-container {
+    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+}
+
+:-moz-full-screen #presentation-container {
+    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+}
+
+:-ms-fullscreen #presentation-container {
+    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+}
+
+:fullscreen #presentation-container {
+    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Reveal.js in real fullscreen - use full viewport */
+:-webkit-full-screen #presentation-container .reveal,
+:-moz-full-screen #presentation-container .reveal,
+:-ms-fullscreen #presentation-container .reveal,
+:fullscreen #presentation-container .reveal {
+    width: 100vw !important;
+    height: 100vh !important;
+    margin-left: 0 !important;
+}
+
+:-webkit-full-screen #presentation-container .reveal .slides,
+:-moz-full-screen #presentation-container .reveal .slides,
+:-ms-fullscreen #presentation-container .reveal .slides,
+:fullscreen #presentation-container .reveal .slides {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+:-webkit-full-screen #presentation-container .reveal .slides section,
+:-moz-full-screen #presentation-container .reveal .slides section,
+:-ms-fullscreen #presentation-container .reveal .slides section,
+:fullscreen #presentation-container .reveal .slides section {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+:-webkit-full-screen #presentation-container .reveal .slides section img,
+:-moz-full-screen #presentation-container .reveal .slides section img,
+:-ms-fullscreen #presentation-container .reveal .slides section img,
+:fullscreen #presentation-container .reveal .slides section img {
+    max-width: calc(100vw - 40px) !important;
+    max-height: calc(100vh - 40px) !important;
+}
+
+/* Animations for gesture feedback */
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes victoryPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.victory-detected {
+    animation: victoryPulse 1s ease-in-out;
+}
+
+.gesture-item.active {
+    background: rgba(31, 182, 170, 0.15) !important; /* zentrol-teal-500 with 15% opacity for white background */
+    animation: highlight 0.6s ease;
+    color: #1FB6AA !important; /* teal text when active */
+}
+
+/* Header/gesture guide responsive adjustments */
+.gesture-guide {
+    min-height: 50px;
+}
+
+@media (max-width: 640px) {
+    .gesture-guide {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .gesture-guide > div:first-child {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@keyframes highlight {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.gesture-item.active .gesture-emoji {
+    animation: bounce 0.5s ease;
+}
+
+/* Fake fullscreen mode */
+.fake-fullscreen-active {
+    overflow: hidden;
+}
+
+.fake-fullscreen-active #presentation-container.fake-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    padding-left: 0 !important; /* Remove left padding in fullscreen */
+    padding-top: 0 !important; /* Remove top padding in fullscreen */
+    z-index: 9999;
+    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+}
+
+/* Reveal.js fullscreen adjustments */
+.fake-fullscreen-active #presentation-container.fake-fullscreen .reveal {
+    width: 100vw !important;
+    height: 100vh !important;
+    margin-left: 0 !important;
+}
+
+.fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+.fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides section {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+.fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides section img {
+    max-width: calc(100vw - 40px) !important;
+    max-height: calc(100vh - 40px) !important;
+}
+
+/* Reset Reveal.js when NOT in fullscreen - prevent overflow */
+#presentation-container:not(.fake-fullscreen) .reveal {
+    width: 100% !important;
+    height: calc(100vh - 50px) !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+#presentation-container:not(.fake-fullscreen) .reveal .slides {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+#presentation-container:not(.fake-fullscreen) .reveal .slides section {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+.hidden-in-fake-fullscreen {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease;
+}
+
+.fake-fullscreen-active #slide-indicator {
+    z-index: 10000;
+}
+
+/* Confidence bar transition */
+#confidence-bar {
+    transition: width 0.3s ease;
+}
+
+/* Reveal.js progress bar - white color, full screen width */
+.reveal .progress {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    bottom: 0 !important;
+    height: 3px !important;
+    color: white !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    z-index: 1000 !important;
+}
+
+.reveal .progress span {
+    background: white !important;
+}
+
+/* Camera feed hidden state - handled by Tailwind's hidden class */
+
+/* Responsive adjustments - Mobile view */
+@media (max-width: 768px) {
+    #presentation-container {
+        padding-top: 50px !important;
+        padding-left: 0 !important;
+        padding-bottom: 70px !important; /* Space for mobile controls */
+        padding-right: 0 !important;
+    }
+    
+    #presentation-container .reveal {
+        height: calc(100vh - 50px - 70px) !important; /* Account for header and mobile controls */
+        width: 100% !important;
+    }
+    
+    #presentation-container .reveal .slides section img {
+        max-width: calc(100% - 160px) !important; /* Account for camera container width */
+        max-height: calc(100vh - 50px - 70px - 40px) !important;
+        margin: 10px !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Camera container on mobile - smaller and positioned top-right */
+    #camera-container {
+        position: fixed !important;
+        top: 75px !important;
+        right: 8px !important;
+        left: auto !important;
+        width: 140px !important;
+        transform: none !important;
+        z-index: 999 !important;
+    }
+    
+    /* Adjust header for mobile */
+    .gesture-guide {
+        min-height: 50px;
+    }
+}

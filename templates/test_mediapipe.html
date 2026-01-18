@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MediaPipe Test</title>
+    <script src="{% static 'mediapipe/hands.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <h1>MediaPipe Test</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    
+    <script>
+    async function testMediaPipe() {
+        console.log('Testing MediaPipe...');
+        
+        try {
+            const video = document.getElementById('video');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            
+            const hands = new Hands({
+                locateFile: (file) => `/static/mediapipe/${file}`
+            });
+            
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            
+            hands.onResults((results) => {
+                console.log('MediaPipe results:', results);
+                document.body.innerHTML += '<p>✅ MediaPipe is working!</p>';
+            });
+            
+            const camera = new Camera(video, {
+                onFrame: async () => {
+                    await hands.send({ image: video });
+                }
+            });
+            
+            camera.start();
+            console.log('✅ Test started successfully');
+            
+        } catch (error) {
+            console.error('❌ Test failed:', error);
+            document.body.innerHTML += `<p style="color: red">❌ Error: ${error.message}</p>`;
+        }
+    }
+    
+    testMediaPipe();
+    </script>
+</body>
+</html>

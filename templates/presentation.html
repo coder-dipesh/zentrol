@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gesture-controlled presentation system using MediaPipe and Reveal.js">
+    <title>Zentrol | Gesture Controlled Presentation</title>
+
+    {% load static %}
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
+    <link rel="apple-touch-icon" href="{% static 'media/logo/zentrol-icon.svg' %}">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        zentrol: {
+                            navy: {
+                                50:  '#E6EBF0',
+                                100: '#C0CAD8',
+                                200: '#99A9C0',
+                                300: '#7288A8',
+                                400: '#4B6790',
+                                500: '#0F1E2E', // Primary
+                                600: '#0D1A28',
+                                700: '#0B1622',
+                                800: '#09121C',
+                                900: '#070E16'
+                            },
+                            teal: {
+                                50:  '#E6FAF8',
+                                100: '#C1F0EB',
+                                200: '#9CE6DE',
+                                300: '#77DCD1',
+                                400: '#52D2C4',
+                                500: '#1FB6AA', // Accent
+                                600: '#1AA096',
+                                700: '#168A82',
+                                800: '#11746E',
+                                900: '#0D5E5A'
+                            },
+                            gray: {
+                                50:  '#F9FAFB',
+                                100: '#F4F6F8', // Background
+                                200: '#E5E7EB',
+                                300: '#D1D5DB',
+                                400: '#9CA3AF',
+                                500: '#6B7280', // Body text
+                                600: '#4B5563',
+                                700: '#374151',
+                                800: '#1F2933',
+                                900: '#111827'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Reveal.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
+
+    <!-- Essential Custom CSS Only -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <style>
+        /* Essential CSS only - animations and complex selectors that can't be done with Tailwind */
+        
+        /* Reveal.js integration - must keep */
+        #presentation-container .reveal {
+            height: calc(100vh - 50px);
+            margin-top: 0;
+            width: 100%;
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            #presentation-container .reveal {
+                height: calc(100vh - 50px - 70px) !important;
+            }
+        }
+
+        #presentation-container .reveal .slides {
+            height: 100%;
+            width: 100%;
+        }
+
+        #presentation-container .reveal .slides section {
+            width: 100% !important;
+            height: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box;
+        }
+
+        #presentation-container .reveal .slides section img {
+            max-width: calc(100% - 40px) !important;
+            max-height: calc(100% - 40px) !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            background: #fff;
+            padding: 0;
+            margin: 20px;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes highlight {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Fullscreen mode */
+        .fake-fullscreen-active {
+            overflow: hidden;
+        }
+
+        .fake-fullscreen-active #presentation-container.fake-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+        }
+
+        .hidden-in-fake-fullscreen {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.3s ease;
+        }
+
+        .fake-fullscreen-active #slide-indicator {
+            z-index: 10000;
+        }
+
+        /* Confidence bar transition */
+        #confidence-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+
+<body data-session-id="{{ session_id }}" class="m-0 p-0 overflow-hidden font-sans antialiased bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 text-white">
+    <!-- CSRF Token -->
+    {% csrf_token %}
+
+    <!-- Skip to content link for accessibility -->
+    <a href="#presentation-container" class="sr-only">Skip to presentation</a>
+
+    <!-- Loading Overlay -->
+    <aside id="loading-overlay" role="alert" aria-live="polite" class="fixed inset-0 w-full h-full bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 flex flex-col justify-center items-center z-[2000] text-white transition-opacity duration-500">
+        <div class="loader w-12 h-12 border-[5px] border-white/10 border-t-zentrol-teal-500 rounded-full animate-spin mb-5" aria-hidden="true"></div>
+        <h3 class="text-xl font-bold mb-2">Initializing Gesture Detection</h3>
+        <p class="mb-2">Please allow camera access when prompted</p>
+        <p id="loading-status" class="text-sm opacity-75">Loading MediaPipe...</p>
+    </aside>
+
+    <!-- Main Presentation Container -->
+    <main id="presentation-container" class="relative w-screen h-screen bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 pt-[50px] md:pt-[50px] pl-0 md:pl-[220px] overflow-hidden">
+        
+        <!-- Camera Feed and Gesture Overlay Container -->
+        <aside id="camera-container" class="fixed md:top-1/2 md:-translate-y-1/2 md:left-5 top-[75px] right-2 md:w-[200px] w-[140px] flex flex-col gap-0 rounded-lg overflow-hidden border border-zentrol-teal-500/50 bg-gradient-to-br from-zentrol-navy-500/80 to-zentrol-teal-600/80 backdrop-blur-sm z-[999] shadow-lg">
+            <!-- Camera Feed - Top Section -->
+            <video 
+                id="camera-feed" 
+                autoplay 
+                playsinline 
+                muted
+                aria-label="Camera feed for gesture detection"
+                class="w-full md:h-[150px] h-[100px] bg-zentrol-navy-600 object-cover -scale-x-100"
+            ></video>
+
+            <!-- Gesture Overlay - Bottom Section -->
+            <aside id="gesture-overlay" aria-live="polite" aria-atomic="true" class="w-full md:p-4 p-2 bg-zentrol-teal-700 text-white text-center">
+                <div id="gesture-icon" aria-hidden="true" class="md:text-5xl text-3xl md:my-2 my-1">👋</div>
+                <div id="gesture-name" class="md:text-sm text-xs font-semibold md:my-2 my-1 min-h-[16px] md:min-h-[20px] text-white">Waiting for gesture...</div>
+                <div id="gesture-confidence" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" class="h-1 md:h-1.5 bg-zentrol-teal-800 rounded overflow-hidden md:my-2 my-1">
+                    <div id="confidence-bar" class="h-full bg-zentrol-teal-400"></div>
+                </div>
+                <div class="text-[10px] md:text-xs mt-1 md:mt-2 flex justify-around font-mono text-zentrol-gray-300">
+                    FPS: <span id="fps-counter">0</span> | 
+                    <span id="latency-counter">0</span>ms
+                </div>
+            </aside>
+
+            <!-- Control Buttons - Vertical Layout (Hidden on mobile, shown in bottom bar) -->
+            <nav class="hidden md:flex w-full p-3 bg-white border-t border-zentrol-teal-500 flex-col gap-2" aria-label="Presentation controls">
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:bg-zentrol-gray-600 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none w-full flex items-center justify-center gap-2" onclick="Reveal.prev()" aria-label="Previous slide">
+                    <span class="text-lg" aria-hidden="true">◀</span>
+                    <span>Previous</span>
+                </button>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:bg-zentrol-gray-600 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none w-full flex items-center justify-center gap-2" onclick="Reveal.next()" aria-label="Next slide">
+                    <span>Next</span>
+                    <span class="text-lg" aria-hidden="true">▶</span>
+                </button>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:bg-zentrol-gray-600 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none w-full flex items-center justify-center gap-2" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
+                    <span class="text-lg" aria-hidden="true">⛶</span>
+                    <span>Fullscreen</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Header Bar with Logo, Gesture Controls, and Action Buttons -->
+        <header class="gesture-guide fixed top-0 left-0 right-0 bg-white text-zentrol-navy-500 py-2 md:py-2.5 px-3 md:px-5 border-b-2 border-zentrol-gray-200 z-[1000] shadow-md flex items-center gap-2 md:gap-4" aria-label="Presentation header">
+            <!-- Logo on the left -->
+            <div class="flex items-center gap-2 md:gap-3 flex-shrink-0 hover:bg-zentrol-navy-500/20 transition-colors duration-300 cursor-pointer ring-2 ring-zentrol-gray-500/20 rounded-md p-1.5 md:p-2" title="Zentrol">
+                <a href="/" target="_self" rel="noopener noreferrer" title="Zentrol">
+                    <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol Logo" class="h-6 md:h-8 w-auto">
+                </a>
+            </div>
+            
+            <!-- Gesture Controls centered -->
+            <nav class="hidden md:flex items-center gap-3 flex-1 justify-center flex-wrap min-w-0" aria-label="Gesture controls">
+                <h2 class="m-0 text-sm font-semibold text-zentrol-navy-600 pr-3 border-r border-zentrol-gray-300 hidden lg:block">Controls</h2>
+                <ul class="flex items-center gap-0 list-none m-0 p-0" role="list">
+                    <li class="gesture-item flex items-center m-0 px-3 py-1.5 rounded-md transition-all duration-300 whitespace-nowrap hover:bg-zentrol-gray-100">
+                        <span class="gesture-emoji text-xl mr-2 text-center" aria-hidden="true">👍</span>
+                        <span class="gesture-action text-[13px] font-medium text-zentrol-navy-700 hidden md:inline">Previous</span>
+                    </li>
+                    <li class="gesture-item flex items-center m-0 px-3 py-1.5 rounded-md transition-all duration-300 whitespace-nowrap hover:bg-zentrol-gray-100">
+                        <span class="gesture-emoji text-xl mr-2 text-center" aria-hidden="true">✌️</span>
+                        <span class="gesture-action text-[13px] font-medium text-zentrol-navy-700 hidden md:inline">Next</span>
+                    </li>
+                    <li class="gesture-item flex items-center m-0 px-3 py-1.5 rounded-md transition-all duration-300 whitespace-nowrap hover:bg-zentrol-gray-100">
+                        <span class="gesture-emoji text-xl mr-2 text-center" aria-hidden="true">🖐️</span>
+                        <span class="gesture-action text-[13px] font-medium text-zentrol-navy-700 hidden md:inline">Fullscreen</span>
+                    </li>
+                    <li class="gesture-item flex items-center m-0 px-3 py-1.5 rounded-md transition-all duration-300 whitespace-nowrap hover:bg-zentrol-gray-100">
+                        <span class="gesture-emoji text-xl mr-2 text-center" aria-hidden="true">✊</span>
+                        <span class="gesture-action text-[13px] font-medium text-zentrol-navy-700 hidden md:inline">Exit</span>
+                    </li>
+                    <li class="gesture-item flex items-center m-0 px-3 py-1.5 rounded-md transition-all duration-300 whitespace-nowrap hover:bg-zentrol-gray-100">
+                        <span class="gesture-emoji text-xl mr-2 text-center" aria-hidden="true">☝️</span>
+                        <span class="gesture-action text-[13px] font-medium text-zentrol-navy-700 hidden md:inline">Reset</span>
+                    </li>
+                </ul>
+            </nav>
+
+        </header>
+        
+        <!-- Mobile Controls - Bottom Fixed Bar -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-zentrol-gray-200 z-[1000] shadow-lg">
+            <div class="flex items-center justify-around px-4 py-3 gap-2">
+                <button class="flex-1 bg-zentrol-teal-500 text-white border-none px-3 py-2.5 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 active:bg-zentrol-teal-600" onclick="Reveal.prev()" aria-label="Previous slide">
+                    <span class="text-base" aria-hidden="true">◀</span>
+                    <span>Previous</span>
+                </button>
+                <button class="flex-1 bg-zentrol-teal-500 text-white border-none px-3 py-2.5 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 active:bg-zentrol-teal-600" onclick="Reveal.next()" aria-label="Next slide">
+                    <span>Next</span>
+                    <span class="text-base" aria-hidden="true">▶</span>
+                </button>
+                <button class="flex-1 bg-zentrol-teal-500 text-white border-none px-3 py-2.5 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 active:bg-zentrol-teal-600" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
+                    <span class="text-base" aria-hidden="true">⛶</span>
+                    <span>Fullscreen</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Reveal.js Presentation Container -->
+        <div class="reveal" role="region" aria-label="Presentation slides">
+            <div class="slides">
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/1.png' %}" alt="Gesture Controlled Presentation - Slide 1">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/2.png' %}" alt="Gesture Controlled Presentation - Slide 2">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/3.png' %}" alt="Gesture Controlled Presentation - Slide 3">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/4.png' %}" alt="Gesture Controlled Presentation - Slide 4">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/5.png' %}" alt="Gesture Controlled Presentation - Slide 5">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/6.png' %}" alt="Gesture Controlled Presentation - Slide 6">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/7.png' %}" alt="Gesture Controlled Presentation - Slide 7">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/8.png' %}" alt="Gesture Controlled Presentation - Slide 8">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/9.png' %}" alt="Gesture Controlled Presentation - Slide 9">
+                </section>
+
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/10.png' %}" alt="Gesture Controlled Presentation - Slide 10">
+                </section>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+
+    <!-- MediaPipe Dependencies -->
+    <script src="{% static 'mediapipe/hands.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+    <!-- Custom Scripts -->
+    <script src="{% static 'js/gesture_engine.js' %}"></script>
+    <script src="{% static 'js/presentation.js' %}"></script>
+
+    <!-- Main Application Script -->
+    <script>
+        'use strict';
+
+        // ================================================================
+        // Initialize Reveal.js
+        // ================================================================
+        Reveal.initialize({
+            controls: false,
+            progress: true,
+            center: true,
+            hash: true,
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+            width: '100%',
+            height: '100%',
+            margin: 0,
+            minScale: 1,
+            maxScale: 1,
+            
+            // Accessibility
+            keyboardCondition: 'focused',
+            
+            // Performance
+            viewDistance: 3,
+            mobileViewDistance: 2
+        });
+
+        // ================================================================
+        // Initialize Gesture Engine
+        // ================================================================
+        const videoElement = document.getElementById('camera-feed');
+        const gestureEngine = new GestureEngine({
+            profile: 'balanced',  // Options: 'responsive', 'balanced', 'high-accuracy'
+            debug: false          // Set to true for development
+        });
+
+        async function initializeGestureControl() {
+            console.log('🎬 Starting gesture control initialization...');
+
+            try {
+                const success = await gestureEngine.start(videoElement);
+
+                if (success) {
+                    console.log('✅ Gesture control initialized successfully');
+                    startPerformanceMonitoring();
+                } else {
+                    throw new Error('Gesture engine failed to start');
+                }
+
+            } catch (error) {
+                console.error('❌ Initialization failed:', error);
+                
+                const statusEl = document.getElementById('loading-status');
+                if (statusEl) {
+                    statusEl.innerHTML = `
+                        <span class="text-red-400">
+                            ⚠️ Failed to initialize gesture control<br>
+                            <small>${error.message}</small>
+                        </span>
+                    `;
+                }
+
+                // Hide overlay after delay
+                setTimeout(() => {
+                    const overlay = document.getElementById('loading-overlay');
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
+                }, 3000);
+            }
+        }
+
+        // ================================================================
+        // Performance Monitoring (FIXED)
+        // ================================================================
+        function startPerformanceMonitoring() {
+            setInterval(() => {
+                // Safe access with null checks
+                if (!gestureEngine || !gestureEngine.metrics) return;
+                
+                const metrics = gestureEngine.metrics.getMetrics();
+                
+                const fpsEl = document.getElementById('fps-counter');
+                const latencyEl = document.getElementById('latency-counter');
+                
+                if (fpsEl) fpsEl.textContent = Math.round(metrics.fps);
+                if (latencyEl) latencyEl.textContent = Math.round(metrics.avgDetectionTime);
+            }, 1000);
+        }
+
+        // ================================================================
+        // Cleanup on Page Unload
+        // ================================================================
+        window.addEventListener('beforeunload', () => {
+            if (gestureEngine) {
+                gestureEngine.stop();
+            }
+        });
+
+        // ================================================================
+        // Start Application
+        // ================================================================
+        window.addEventListener('load', () => {
+            initializeGestureControl();
+        });
+
+        // ================================================================
+        // Error Recovery
+        // ================================================================
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            
+            // Prevent complete failure
+            event.preventDefault();
+        });
+
+        // ================================================================
+        // Keyboard Shortcuts Info (CORRECTED)
+        // ================================================================
+        console.log(`
+╔════════════════════════════════════════════════════════╗
+║  GESTURE-CONTROLLED PRESENTATION                       ║
+╠════════════════════════════════════════════════════════╣
+║  Gestures:                                             ║
+║    👍 Thumbs Up     → Previous Slide                  ║
+║    ✌️  Peace Sign    → Next Slide                     ║
+║    🖐️ Open Palm     → Toggle Fullscreen               ║
+║    ✊ Fist          → Exit Fullscreen                 ║
+║    ☝️ Point Up      → Reset to First Slide            ║
+║                                                        ║
+║  Keyboard Shortcuts:                                   ║
+║    Ctrl/Cmd + F     → Toggle Fullscreen               ║
+║    Ctrl/Cmd + R     → Reset Presentation              ║
+║    Arrow Keys       → Navigate Slides                 ║
+╚════════════════════════════════════════════════════════╝
+        `);
+    </script>
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Gesture Controlled Presentation",
+        "description": "Interactive presentation system controlled by hand gestures using MediaPipe and AI",
+        "applicationCategory": "Presentation Software",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+</body>
+</html>
