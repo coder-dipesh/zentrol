@@ -1,9 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "python manage.py migrate --noinput && python manage.py collectstatic --noinput",
-  "builds": [
-    { "src": "manage.py", "use": "@vercel/python" }
-  ],
+ 
   "routes": [
     {
       "src": "/static/(.*)",
