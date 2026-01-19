@@ -8,7 +8,7 @@ import environ
 
 # Initialize environment variables
 env = environ.Env()
-environ.Env.read_env()
+env.read_env()
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -77,26 +77,19 @@ ASGI_APPLICATION = 'config.asgi.application'
 # Note: /tmp is ephemeral - data may be cleared between invocations
 def is_serverless_environment():
     """Detect if we're running in a serverless/read-only filesystem environment."""
-    # Check environment variables
+    # Check environment variables first (fastest check)
     if os.environ.get('VERCEL', '').lower() == '1':
         return True
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None:
         return True
     
-    # Check if BASE_DIR is in a serverless path
+    # Check if BASE_DIR is in a serverless path (common in Vercel/Lambda)
     base_dir_str = str(BASE_DIR)
     if '/var/task' in base_dir_str or '/var/runtime' in base_dir_str:
         return True
     
-    # Try to write to a test file to check filesystem permissions
-    try:
-        test_file_path = BASE_DIR / '.write_test'
-        with open(test_file_path, 'w') as f:
-            f.write('test')
-        os.remove(test_file_path)
-        return False  # Filesystem is writable
-    except (OSError, PermissionError, IOError):
-        return True  # Filesystem is read-only
+    # If none of the above match, assume local development
+    return False
 
 IS_SERVERLESS = is_serverless_environment()
 

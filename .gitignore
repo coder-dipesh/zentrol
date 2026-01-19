@@ -42,7 +42,7 @@ staticfiles/
 DEPLOYMENT.md
 PRODUCTION_READY.md
 VERCEL_BUILD_NOTES.md
-
+MIGRATIONS_VERCEL.md
 
 # Logs
 *.log
