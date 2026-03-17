@@ -6,11 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Zentrol | Gesture Controlled Presentation</title>
 
-  <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
   <link rel="apple-touch-icon" href="{% static 'media/logo/zentrol-icon.svg' %}">
 
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -36,67 +34,66 @@
       }
     }
   </script>
-  
+
   <style>
     @keyframes pulse-ripple {
-      0% {
-        transform: scale(1);
-        opacity: 1;
-      }
-      100% {
-        transform: scale(2.5);
-        opacity: 0;
-      }
+      0%   { transform: scale(1); opacity: 1; }
+      100% { transform: scale(2.5); opacity: 0; }
     }
-    
-    .pulse-dot-container {
-      position: relative;
-      display: inline-block;
-      width: 8px;
-      height: 8px;
+    .pulse-dot-container { position:relative; display:inline-block; width:8px; height:8px; }
+    .pulse-dot { position:absolute; top:0; left:0; width:8px; height:8px; border-radius:50%; background:#1FB6AA; animation:pulse-ripple 2s ease-out infinite; }
+    .pulse-dot:nth-child(1){animation-delay:0s}
+    .pulse-dot:nth-child(2){animation-delay:.4s}
+    .pulse-dot:nth-child(3){animation-delay:.8s}
+    .pulse-dot:nth-child(4){animation-delay:1.2s}
+    .pulse-dot-core { position:absolute; top:0; left:0; width:8px; height:8px; border-radius:50%; background:#1FB6AA; z-index:1; }
+
+    /* Upload zone */
+    #upload-zone {
+      border: 2px dashed #1FB6AA;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
     }
-    
-    .pulse-dot {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: #1FB6AA;
-      animation: pulse-ripple 2s ease-out infinite;
+    #upload-zone.drag-over {
+      background: rgba(31,182,170,0.08);
+      border-color: #168A82;
+      transform: scale(1.01);
     }
-    
-    .pulse-dot:nth-child(1) {
-      animation-delay: 0s;
+    #upload-zone.has-file {
+      border-style: solid;
+      border-color: #1FB6AA;
+      background: rgba(31,182,170,0.05);
     }
-    
-    .pulse-dot:nth-child(2) {
-      animation-delay: 0.4s;
+
+    /* Progress bar */
+    #upload-progress-bar {
+      transition: width 0.3s ease;
     }
-    
-    .pulse-dot:nth-child(3) {
-      animation-delay: 0.8s;
+
+    /* Slide preview strip */
+    .preview-thumb {
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
     }
-    
-    .pulse-dot:nth-child(4) {
-      animation-delay: 1.2s;
+    .preview-thumb:hover {
+      transform: scale(1.04);
+      box-shadow: 0 4px 16px rgba(15,30,46,0.18);
     }
-    
-    .pulse-dot-core {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: #1FB6AA;
-      z-index: 1;
+    .preview-thumb.active-thumb {
+      outline: 3px solid #1FB6AA;
+      outline-offset: 2px;
     }
+
+    /* Slide-in animation for upload section */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-up { animation: slideUp 0.45s ease both; }
   </style>
 </head>
 
 <body class="min-h-screen bg-zentrol-gray-100 text-zentrol-navy-500">
+
   <!-- Background accents -->
   <div class="pointer-events-none fixed inset-0 -z-10">
     <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-zentrol-teal-200/40 blur-3xl"></div>
@@ -110,23 +107,20 @@
         <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-9 w-9">
         <span class="text-lg font-semibold tracking-tight">Zentrol</span>
       </a>
-
       <nav class="hidden items-center gap-7 md:flex">
+        <a href="#upload" class="text-sm text-zentrol-gray-600 hover:text-zentrol-navy-500">Upload</a>
         <a href="#features" class="text-sm text-zentrol-gray-600 hover:text-zentrol-navy-500">Features</a>
         <a href="#how" class="text-sm text-zentrol-gray-600 hover:text-zentrol-navy-500">How it works</a>
         <a href="#usecases" class="text-sm text-zentrol-gray-600 hover:text-zentrol-navy-500">Use cases</a>
-
         <a href="/presentation/"
            class="rounded-lg bg-zentrol-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-sm
-                  hover:bg-zentrol-teal-600 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300 focus:ring-offset-2">
-          Try live demo
+                  hover:bg-zentrol-teal-600 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300">
+          Demo (no file)
         </a>
       </nav>
-
-      <!-- Mobile CTA -->
       <a href="/presentation/"
          class="md:hidden rounded-lg bg-zentrol-teal-500 px-3 py-2 text-sm font-semibold text-white hover:bg-zentrol-teal-600">
-        Try Live Demo
+        Demo
       </a>
     </div>
   </header>
@@ -134,143 +128,201 @@
   <!-- HERO -->
   <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
     <div class="grid items-center gap-12 lg:grid-cols-2">
-      <!-- Copy -->
       <div>
         <div class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-zentrol-gray-700 shadow-sm">
           <span class="pulse-dot-container">
-            <span class="pulse-dot"></span>
-            <span class="pulse-dot"></span>
-            <span class="pulse-dot"></span>
-            <span class="pulse-dot"></span>
+            <span class="pulse-dot"></span><span class="pulse-dot"></span>
+            <span class="pulse-dot"></span><span class="pulse-dot"></span>
             <span class="pulse-dot-core"></span>
           </span>
           Web-based • Real-time AI • No hardware
         </div>
-
-        <h1 class="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">
-          Control, naturally.
-        </h1>
-
+        <h1 class="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">Control, naturally.</h1>
         <p class="mt-4 max-w-xl text-lg leading-relaxed text-zentrol-gray-600">
-          Zentrol is a web-based AI platform that lets you control presentations and web apps using hand gestures.
-          No remotes. No clicks. Just your camera and natural movement.
+          Upload your PPTX, then control it with hand gestures and hear every slide read aloud automatically — no remote, no clicks.
         </p>
-
-        <!-- CTA -->
         <div class="mt-8 flex flex-wrap items-center gap-3">
-          <a href="/presentation/"
+          <a href="#upload"
              class="rounded-lg bg-zentrol-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-sm
-                    hover:bg-zentrol-teal-600 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300 focus:ring-offset-2">
-            Start live demo
+                    hover:bg-zentrol-teal-600 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300">
+            Upload your PPTX ↓
           </a>
-
           <a href="#how"
              class="rounded-lg border border-zentrol-gray-200 bg-white px-5 py-3 text-sm font-semibold
-                    hover:bg-zentrol-gray-50 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-100 focus:ring-offset-2">
+                    hover:bg-zentrol-gray-50 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-100">
             How it works
           </a>
-
-          <p class="w-full text-sm text-zentrol-gray-500">
-            Camera stays on your device. You can turn it off anytime.
-          </p>
+          <p class="w-full text-sm text-zentrol-gray-500">Your file never leaves your device.</p>
         </div>
 
-        <!-- Mini stats -->
         <div class="mt-10 grid max-w-xl grid-cols-3 gap-4">
           <div class="rounded-xl border border-zentrol-gray-200 bg-white p-4">
             <div class="mb-2 w-8 h-8 text-zentrol-teal-500" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
             <p class="text-sm font-semibold">Low latency</p>
             <p class="mt-1 text-sm text-zentrol-gray-600">Smooth response</p>
           </div>
           <div class="rounded-xl border border-zentrol-gray-200 bg-white p-4">
             <div class="mb-2 w-8 h-8 text-zentrol-teal-500" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                <circle cx="12" cy="12" r="2" fill="currentColor"/>
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
             </div>
-            <p class="text-sm font-semibold">Accurate</p>
-            <p class="mt-1 text-sm text-zentrol-gray-600">Reliable detection</p>
+            <p class="text-sm font-semibold">Reads slides</p>
+            <p class="mt-1 text-sm text-zentrol-gray-600">Real text, not scripts</p>
           </div>
           <div class="rounded-xl border border-zentrol-gray-200 bg-white p-4">
             <div class="mb-2 w-8 h-8 text-zentrol-teal-500" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="1.5"/></svg>
             </div>
-            <p class="text-sm font-semibold">Cross-browser</p>
-            <p class="mt-1 text-sm text-zentrol-gray-600">Works widely</p>
+            <p class="text-sm font-semibold">Plugin-ready</p>
+            <p class="mt-1 text-sm text-zentrol-gray-600">Works on Moodle</p>
           </div>
         </div>
       </div>
 
-      <!-- Visual (Hero illustration) -->
+      <!-- Hero visual -->
       <div class="relative">
         <div class="absolute -top-10 -right-10 h-56 w-56 rounded-full bg-zentrol-teal-200/40 blur-3xl"></div>
         <div class="absolute -bottom-10 -left-10 h-56 w-56 rounded-full bg-zentrol-navy-200/40 blur-3xl"></div>
-
         <div class="relative overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm">
           <p class="text-xs font-semibold text-zentrol-gray-500">Gesture control in action</p>
-
-          <img
-            src="{% static 'media/images/hero-gesture.svg' %}"
-            alt="Gesture controlling a presentation"
-            class="mt-4 w-full"
-          />
-
+          <img src="{% static 'media/images/hero-gesture.svg' %}" alt="Gesture controlling a presentation" class="mt-4 w-full">
           <div class="mt-5 flex flex-wrap items-center gap-2">
             <span class="rounded-full bg-zentrol-teal-50 px-3 py-1 text-xs font-semibold text-zentrol-teal-700">Live</span>
-            <span class="rounded-full bg-zentrol-gray-100 px-3 py-1 text-xs font-semibold text-zentrol-gray-700">On-device camera</span>
+            <span class="rounded-full bg-zentrol-gray-100 px-3 py-1 text-xs font-semibold text-zentrol-gray-700">On-device only</span>
             <span class="rounded-full bg-zentrol-gray-100 px-3 py-1 text-xs font-semibold text-zentrol-gray-700">No hardware</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Optional: pipeline strip under hero -->
     <div class="mt-10">
-      <img
-        src="{% static 'media/images/pipeline-strip.svg' %}"
-        alt="Camera to gesture to action"
-        class="w-full"
-      />
+      <img src="{% static 'media/images/pipeline-strip.svg' %}" alt="Camera to gesture to action" class="w-full">
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       UPLOAD ZONE
+  ════════════════════════════════════════════════════════════════ -->
+  <section id="upload" class="mx-auto max-w-4xl px-4 py-14 sm:px-6 lg:px-8">
+    <div class="text-center mb-8">
+      <h2 class="text-2xl font-semibold tracking-tight">Upload your presentation</h2>
+      <p class="mt-2 text-zentrol-gray-600">
+        Your file is processed entirely in your browser — nothing is uploaded to a server.
+      </p>
+    </div>
+
+    <!-- Drop zone -->
+    <div
+      id="upload-zone"
+      class="rounded-2xl bg-white p-10 text-center cursor-pointer select-none"
+      role="button"
+      tabindex="0"
+      aria-label="Upload PPTX file"
+      onclick="document.getElementById('file-input').click()"
+      onkeydown="if(event.key==='Enter'||event.key===' ')document.getElementById('file-input').click()">
+
+      <!-- Icon -->
+      <div id="upload-icon" class="mx-auto mb-4 w-16 h-16 rounded-2xl bg-zentrol-teal-50 flex items-center justify-center text-zentrol-teal-500">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+      </div>
+
+      <p id="upload-label" class="text-base font-semibold text-zentrol-navy-500">
+        Drag & drop your PPTX here
+      </p>
+      <p class="mt-1 text-sm text-zentrol-gray-500">or click to browse — .pptx files only</p>
+
+      <!-- Hidden input -->
+      <input id="file-input" type="file" accept=".pptx,.ppt" class="hidden"
+             onchange="handleFileSelect(this.files[0])">
+    </div>
+
+    <!-- Progress (hidden until upload) -->
+    <div id="upload-progress-wrap" class="hidden mt-6 animate-slide-up">
+      <div class="flex items-center justify-between mb-2">
+        <span id="upload-progress-label" class="text-sm font-medium text-zentrol-navy-500">Processing…</span>
+        <span id="upload-progress-pct" class="text-sm font-mono text-zentrol-teal-600">0%</span>
+      </div>
+      <div class="h-2 w-full rounded-full bg-zentrol-gray-200 overflow-hidden">
+        <div id="upload-progress-bar" class="h-full rounded-full bg-zentrol-teal-500 w-0"></div>
+      </div>
+    </div>
+
+    <!-- Error message -->
+    <div id="upload-error" class="hidden mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-slide-up">
+      <span id="upload-error-text"></span>
+    </div>
+
+    <!-- Slide preview strip (hidden until loaded) -->
+    <div id="preview-section" class="hidden mt-8 animate-slide-up">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-zentrol-navy-500" id="preview-title">Slides ready</h3>
+          <p class="text-sm text-zentrol-gray-500" id="preview-subtitle"></p>
+        </div>
+        <button onclick="clearFile()"
+                class="text-xs text-zentrol-gray-500 hover:text-zentrol-navy-500 underline underline-offset-2">
+          Remove file
+        </button>
+      </div>
+
+      <!-- Thumbnail strip -->
+      <div id="preview-strip" class="flex gap-3 overflow-x-auto pb-3 snap-x">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- Narration preview for hovered slide -->
+      <div id="slide-text-preview" class="mt-4 p-4 rounded-xl bg-zentrol-navy-500/5 border border-zentrol-gray-200 min-h-[60px]">
+        <p class="text-xs font-semibold text-zentrol-teal-600 mb-1 uppercase tracking-widest">Narration preview</p>
+        <p id="slide-text-content" class="text-sm text-zentrol-gray-700 leading-relaxed italic">
+          Hover a slide thumbnail to preview its narration text.
+        </p>
+      </div>
+
+      <!-- CTA -->
+      <div class="mt-6 flex flex-col sm:flex-row gap-3">
+        <a id="start-btn" href="/presentation/"
+           class="flex-1 text-center rounded-xl bg-zentrol-teal-500 px-6 py-4 text-base font-bold text-white shadow-md
+                  hover:bg-zentrol-teal-600 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300 transition-all">
+          🚀 Start presenting with gestures
+        </a>
+        <button onclick="clearFile()"
+                class="rounded-xl border-2 border-zentrol-gray-200 bg-white px-6 py-4 text-sm font-semibold
+                       hover:bg-zentrol-gray-50 transition-all">
+          Upload different file
+        </button>
+      </div>
+
+      <p class="mt-3 text-center text-xs text-zentrol-gray-400">
+        Your slides stay on your device. Narration reads the real text from your PPTX.
+      </p>
     </div>
   </section>
 
   <!-- FEATURES -->
   <section id="features" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
     <h2 class="text-2xl font-semibold tracking-tight">Features</h2>
-    <p class="mt-2 max-w-2xl text-zentrol-gray-600">
-      Simple on the surface, powerful underneath.
-    </p>
-
+    <p class="mt-2 max-w-2xl text-zentrol-gray-600">Simple on the surface, powerful underneath.</p>
     <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-realtime.svg' %}" alt="Real-time recognition" class="h-24 w-auto mx-auto" />
+        <img src="{% static 'media/images/feature-realtime.svg' %}" alt="Real-time recognition" class="h-24 w-auto mx-auto">
         <h3 class="mt-4 font-semibold">Real-time recognition</h3>
         <p class="mt-2 text-sm text-zentrol-gray-600">Fast detection that keeps up with natural movement.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-presentation.svg' %}" alt="Presentation control" class="h-24 w-auto mx-auto" />
-        <h3 class="mt-4 font-semibold">Presentation control</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Next/previous slide, start/stop, and more.</p>
+        <img src="{% static 'media/images/feature-presentation.svg' %}" alt="Presentation control" class="h-24 w-auto mx-auto">
+        <h3 class="mt-4 font-semibold">PPTX narration</h3>
+        <p class="mt-2 text-sm text-zentrol-gray-600">Reads real slide text aloud — not hardcoded scripts.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-webapp.svg' %}" alt="Web app actions" class="h-24 w-auto mx-auto" />
-        <h3 class="mt-4 font-semibold">Web app actions</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Trigger buttons, scroll pages, and control UI states.</p>
+        <img src="{% static 'media/images/feature-webapp.svg' %}" alt="Web app actions" class="h-24 w-auto mx-auto">
+        <h3 class="mt-4 font-semibold">Moodle plugin</h3>
+        <p class="mt-2 text-sm text-zentrol-gray-600">Embed Zentrol directly in your LMS via iframe or LTI.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-nohardware.svg' %}" alt="No hardware" class="h-24 w-auto mx-auto" />
+        <img src="{% static 'media/images/feature-nohardware.svg' %}" alt="No hardware" class="h-24 w-auto mx-auto">
         <h3 class="mt-4 font-semibold">No hardware</h3>
         <p class="mt-2 text-sm text-zentrol-gray-600">Runs in the browser with your existing camera.</p>
       </div>
@@ -281,27 +333,24 @@
   <section id="how" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
     <h2 class="text-2xl font-semibold tracking-tight">How it works</h2>
     <p class="mt-2 max-w-2xl text-zentrol-gray-600">Three steps. No complicated setup.</p>
-
     <div class="mt-10 grid gap-6 lg:grid-cols-3">
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-7 shadow-sm text-center">
-        <img src="{% static 'media/images/how-camera.svg' %}" alt="Enable camera" class="h-28 w-auto mx-auto" />
+        <div class="h-28 w-auto mx-auto flex items-center justify-center text-6xl">📁</div>
         <p class="mt-4 text-sm font-semibold text-zentrol-teal-700">Step 1</p>
-        <h3 class="mt-2 font-semibold">Enable camera</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Allow access so Zentrol can detect your hand gestures.</p>
+        <h3 class="mt-2 font-semibold">Upload your PPTX</h3>
+        <p class="mt-2 text-sm text-zentrol-gray-600">Drop your file — it's parsed in your browser, never sent anywhere.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-7 shadow-sm text-center">
-        <img src="{% static 'media/images/how-gesture.svg' %}" alt="Pick gestures" class="h-28 w-auto mx-auto" />
+        <div class="h-28 w-auto mx-auto flex items-center justify-center text-6xl">🤚</div>
         <p class="mt-4 text-sm font-semibold text-zentrol-teal-700">Step 2</p>
-        <h3 class="mt-2 font-semibold">Pick gestures</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Use presets or map gestures to actions.</p>
+        <h3 class="mt-2 font-semibold">Enable your camera</h3>
+        <p class="mt-2 text-sm text-zentrol-gray-600">Allow camera access so Zentrol can detect your hand gestures live.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-7 shadow-sm text-center">
-        <img src="{% static 'media/images/how-control.svg' %}" alt="Control smoothly" class="h-28 w-auto mx-auto" />
+        <div class="h-28 w-auto mx-auto flex items-center justify-center text-6xl">🎙️</div>
         <p class="mt-4 text-sm font-semibold text-zentrol-teal-700">Step 3</p>
-        <h3 class="mt-2 font-semibold">Control smoothly</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Run your presentation or web app with natural movement.</p>
+        <h3 class="mt-2 font-semibold">Present hands-free</h3>
+        <p class="mt-2 text-sm text-zentrol-gray-600">Navigate with gestures. Each slide's real text is read aloud automatically.</p>
       </div>
     </div>
   </section>
@@ -310,30 +359,26 @@
   <section id="usecases" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
     <h2 class="text-2xl font-semibold tracking-tight">Use cases</h2>
     <p class="mt-2 max-w-2xl text-zentrol-gray-600">Built for real situations, not just demos.</p>
-
     <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-presenter.svg' %}" alt="Presenters" class="h-20 w-auto mx-auto" />
+        <img src="{% static 'media/images/usecase-presenter.svg' %}" alt="Presenters" class="h-20 w-auto mx-auto">
         <h3 class="mt-4 font-semibold">Presenters</h3>
         <p class="mt-2 text-sm text-zentrol-gray-600">Stay engaged while Zentrol handles navigation.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-educator.svg' %}" alt="Educators" class="h-20 w-auto mx-auto" />
+        <img src="{% static 'media/images/usecase-educator.svg' %}" alt="Educators" class="h-20 w-auto mx-auto">
         <h3 class="mt-4 font-semibold">Educators</h3>
         <p class="mt-2 text-sm text-zentrol-gray-600">Keep a natural flow in class or online teaching.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-accessibility.svg' %}" alt="Accessibility" class="h-20 w-auto mx-auto" />
+        <img src="{% static 'media/images/usecase-accessibility.svg' %}" alt="Accessibility" class="h-20 w-auto mx-auto">
         <h3 class="mt-4 font-semibold">Accessibility</h3>
         <p class="mt-2 text-sm text-zentrol-gray-600">Hands-free control for users with limited mobility.</p>
       </div>
-
       <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-demo.svg' %}" alt="Product demos" class="h-20 w-auto mx-auto" />
-        <h3 class="mt-4 font-semibold">Product demos</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Cleaner demos with fewer interruptions and device switching.</p>
+        <img src="{% static 'media/images/usecase-demo.svg' %}" alt="LMS / Moodle" class="h-20 w-auto mx-auto">
+        <h3 class="mt-4 font-semibold">LMS / Moodle</h3>
+        <p class="mt-2 text-sm text-zentrol-gray-600">Embed as a plugin — students upload and present directly in Moodle.</p>
       </div>
     </div>
   </section>
@@ -344,32 +389,18 @@
       <div class="grid gap-8 lg:grid-cols-2 lg:items-center">
         <div>
           <h2 class="text-2xl font-semibold tracking-tight">Ready to try it?</h2>
-          <p class="mt-3 max-w-2xl text-white/80">
-            Start the live demo and control slides with simple gestures.
-          </p>
-
+          <p class="mt-3 max-w-2xl text-white/80">Upload your PPTX and start presenting with gestures — right now.</p>
           <div class="mt-8 flex flex-wrap gap-3">
-            <a href="/presentation/"
-               class="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-zentrol-navy-500 hover:bg-zentrol-gray-50">
-              Start live demo
+            <a href="#upload" class="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-zentrol-navy-500 hover:bg-zentrol-gray-50">
+              Upload your PPTX
             </a>
-            <a href="#features"
-               class="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
-              Explore features
+            <a href="/presentation/" class="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
+              Try demo (no file)
             </a>
           </div>
-
-          <p class="mt-3 text-xs text-white/70">
-            “No downloads required. Works in your browser.”
-          </p>
+          <p class="mt-3 text-xs text-white/70">No downloads required. Works in your browser.</p>
         </div>
-
-        <!-- CTA Illustration -->
-        <img
-          src="{% static 'media/images/feature-presentation.svg' %}"
-          alt=""
-          class="hidden lg:block h-56 w-auto ml-auto opacity-90"
-        />
+        <img src="{% static 'media/images/feature-presentation.svg' %}" alt="" class="hidden lg:block h-56 w-auto ml-auto opacity-90">
       </div>
     </div>
   </section>
@@ -385,19 +416,196 @@
             <p class="text-sm text-zentrol-gray-600">Control, naturally.</p>
           </div>
         </div>
-
         <div class="flex flex-wrap gap-x-8 gap-y-2 text-sm text-zentrol-gray-600">
-          <a href="#features" class="hover:text-zentrol-navy-500">Features</a>
-          <a href="#how" class="hover:text-zentrol-navy-500">How it works</a>
-          <a href="#usecases" class="hover:text-zentrol-navy-500">Use cases</a>
+          <a href="#upload"    class="hover:text-zentrol-navy-500">Upload</a>
+          <a href="#features"  class="hover:text-zentrol-navy-500">Features</a>
+          <a href="#how"       class="hover:text-zentrol-navy-500">How it works</a>
+          <a href="#usecases"  class="hover:text-zentrol-navy-500">Use cases</a>
           <a href="/presentation/" class="hover:text-zentrol-navy-500">Demo</a>
         </div>
       </div>
-
-      <p class="mt-8 text-xs text-zentrol-gray-500">
-        © 2026 Zentrol. Camera access is used only for gesture detection.
-      </p>
+      <p class="mt-8 text-xs text-zentrol-gray-500">© 2026 Zentrol. Camera access is used only for gesture detection.</p>
     </div>
   </footer>
+
+  <!-- JSZip for PPTX parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- PPTX Loader -->
+  <script src="{% static 'js/pptx_loader.js' %}"></script>
+
+  <script>
+    // =========================================================================
+    // PPTX Upload + Preview Logic
+    // =========================================================================
+
+    let pptxLoader = null;
+    let loadedSlides = [];
+
+    // Drag and drop
+    const zone = document.getElementById('upload-zone');
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileSelect(file);
+    });
+
+    async function handleFileSelect(file) {
+        if (!file) return;
+
+        // Reset state
+        hideError();
+        showProgress();
+        hidePreview();
+
+        pptxLoader = new PptxLoader({
+            debug: false,
+            onProgress: (pct, msg) => updateProgress(pct, msg)
+        });
+
+        try {
+            loadedSlides = await pptxLoader.load(file);
+            showPreview(file.name, loadedSlides);
+            saveToSession(loadedSlides);
+        } catch (err) {
+            showError(err.message);
+            hideProgress();
+        }
+    }
+
+    function updateProgress(pct, message) {
+        const wrap = document.getElementById('upload-progress-wrap');
+        const bar  = document.getElementById('upload-progress-bar');
+        const lbl  = document.getElementById('upload-progress-label');
+        const pctEl = document.getElementById('upload-progress-pct');
+
+        wrap.classList.remove('hidden');
+        bar.style.width = `${pct}%`;
+        lbl.textContent = message;
+        pctEl.textContent = `${pct}%`;
+    }
+
+    function showProgress() {
+        document.getElementById('upload-progress-wrap').classList.remove('hidden');
+        updateProgress(0, 'Starting…');
+    }
+
+    function hideProgress() {
+        document.getElementById('upload-progress-wrap').classList.add('hidden');
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('upload-error');
+        document.getElementById('upload-error-text').textContent = `⚠️ ${msg}`;
+        el.classList.remove('hidden');
+    }
+
+    function hideError() {
+        document.getElementById('upload-error').classList.add('hidden');
+    }
+
+    function showPreview(fileName, slides) {
+        hideProgress();
+
+        const section = document.getElementById('preview-section');
+        section.classList.remove('hidden');
+
+        document.getElementById('preview-title').textContent =
+            `✅ ${slides.length} slide${slides.length !== 1 ? 's' : ''} ready`;
+        document.getElementById('preview-subtitle').textContent = fileName;
+
+        // Update upload zone appearance
+        zone.classList.add('has-file');
+        document.getElementById('upload-label').textContent = `📄 ${fileName}`;
+
+        // Build thumbnail strip
+        const strip = document.getElementById('preview-strip');
+        strip.innerHTML = '';
+
+        slides.forEach((slide, i) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'preview-thumb flex-shrink-0 snap-start rounded-xl overflow-hidden border-2 border-zentrol-gray-200 bg-white';
+            thumb.style.width = '160px';
+            thumb.title = `Slide ${i + 1}`;
+
+            if (slide.imageUrl) {
+                const img = document.createElement('img');
+                img.src = slide.imageUrl;
+                img.className = 'w-full';
+                img.style.height = '90px';
+                img.style.objectFit = 'cover';
+                thumb.appendChild(img);
+            } else {
+                // Placeholder for slides without images
+                const placeholder = document.createElement('div');
+                placeholder.className = 'w-full flex items-center justify-center bg-zentrol-gray-100 text-zentrol-gray-400 text-xs font-semibold';
+                placeholder.style.height = '90px';
+                placeholder.textContent = `Slide ${i + 1}`;
+                thumb.appendChild(placeholder);
+            }
+
+            const label = document.createElement('p');
+            label.className = 'text-[10px] font-semibold text-zentrol-gray-600 text-center py-1 px-1 truncate';
+            label.textContent = `Slide ${i + 1}`;
+            thumb.appendChild(label);
+
+            // Hover: show narration preview
+            thumb.addEventListener('mouseenter', () => {
+                document.querySelectorAll('.preview-thumb').forEach(t => t.classList.remove('active-thumb'));
+                thumb.classList.add('active-thumb');
+                const text = slide.text || slide.notes || '(No text found on this slide)';
+                document.getElementById('slide-text-content').textContent = text;
+            });
+
+            strip.appendChild(thumb);
+        });
+
+        // Activate first thumb
+        strip.firstChild?.dispatchEvent(new Event('mouseenter'));
+    }
+
+    function hidePreview() {
+        document.getElementById('preview-section').classList.add('hidden');
+        zone.classList.remove('has-file');
+        document.getElementById('upload-label').textContent = 'Drag & drop your PPTX here';
+    }
+
+    function clearFile() {
+        loadedSlides = [];
+        pptxLoader = null;
+        sessionStorage.removeItem('zentrol_slides');
+        hidePreview();
+        hideError();
+        hideProgress();
+        document.getElementById('file-input').value = '';
+    }
+
+    // =========================================================================
+    // Persist slides to sessionStorage so presentation.html can read them
+    // =========================================================================
+    function saveToSession(slides) {
+        try {
+            // Store text + imageUrl per slide
+            const payload = slides.map(s => ({
+                imageUrl: s.imageUrl,
+                text: s.text,
+                notes: s.notes
+            }));
+            sessionStorage.setItem('zentrol_slides', JSON.stringify(payload));
+            console.log(`✅ Saved ${slides.length} slides to sessionStorage`);
+        } catch (e) {
+            // If sessionStorage is full (large images), store text only
+            console.warn('sessionStorage full — storing text only');
+            const textOnly = slides.map(s => ({
+                imageUrl: null,
+                text: s.text,
+                notes: s.notes
+            }));
+            sessionStorage.setItem('zentrol_slides', JSON.stringify(textOnly));
+        }
+    }
+  </script>
 </body>
 </html>
