@@ -78,10 +78,8 @@
 </head>
 
 <body data-session-id="{{ session_id }}" class="m-0 p-0 overflow-hidden font-sans antialiased bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 text-white">
-    <!-- CSRF Token -->
     {% csrf_token %}
 
-    <!-- Skip to content link for accessibility -->
     <a href="#presentation-container" class="sr-only">Skip to presentation</a>
 
     <!-- Loading Overlay -->
@@ -278,45 +276,122 @@
                 </div>
             </div>
 
-            <!-- Gesture legend -->
-            <ul id="controls-gesture-panel" class="flex flex-col px-2 pt-2 pb-1 gap-0.5 list-none m-0 text-zentrol-navy-700 border-b border-zentrol-gray-200/80" role="list">
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">👍</span>
-                    <span class="gesture-action text-[11px] font-medium">Previous</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">✌️</span>
-                    <span class="gesture-action text-[11px] font-medium">Next</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">🖐️</span>
-                    <span class="gesture-action text-[11px] font-medium">Fullscreen</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">✊</span>
-                    <span class="gesture-action text-[11px] font-medium">Exit</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">☝️</span>
-                    <span class="gesture-action text-[11px] font-medium">Reset</span>
-                </li>
-            </ul>
+            
 
-            <!-- Action buttons -->
-            <nav class="px-2.5 pb-2 pt-1 flex flex-col gap-1.5" aria-label="Presentation controls">
-                <button class="control-btn btn btn-xs md:btn-sm w-full gap-1.5 normal-case bg-zentrol-teal-500 hover:bg-zentrol-teal-400 border-none text-white" onclick="Reveal.prev()" aria-label="Previous slide">
-                    <span class="text-base" aria-hidden="true">◀</span>
-                    <span>Previous</span>
+            <!-- Controls cheat sheet -->
+            <section class="w-full px-3 py-2 bg-zentrol-navy-700 text-white border-t border-white/10" aria-label="Gesture controls cheat sheet">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-white/80 mb-1">
+                    Controls
+                </div>
+                <ul class="space-y-1 text-[11px] leading-tight">
+                    <li class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">👍</span>
+                        <span class="text-white/90">Previous</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">✌️</span>
+                        <span class="text-white/90">Next</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">🖐️</span>
+                        <span class="text-white/90">Fullscreen</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">✊</span>
+                        <span class="text-white/90">Exit</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">☝️</span>
+                        <span class="text-white/90">Reset</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">👌</span>
+                        <span class="text-white/90">Narration</span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Desktop Control Buttons -->
+            <nav class="hidden md:grid w-full p-3 bg-white border-t border-zentrol-teal-500 grid-cols-2 gap-2" aria-label="Presentation controls">
+                <a id="change-file-btn" href="/#upload" style="display:none"
+                   class="col-span-2 w-full flex items-center justify-center gap-2 rounded-xl bg-zentrol-navy-500 text-white px-3 py-2 text-xs font-semibold transition-all duration-200 hover:bg-zentrol-navy-400">
+                    <span>📁</span><span>Change file</span>
+                </a>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-3 py-2 rounded-xl cursor-pointer text-xs font-semibold transition-all duration-200 whitespace-nowrap hover:bg-zentrol-teal-400 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="Reveal.prev()" aria-label="Previous slide">
+                    <span class="text-base" aria-hidden="true">◀</span><span>Prev</span>
                 </button>
-                <button class="control-btn btn btn-xs md:btn-sm w-full gap-1.5 normal-case bg-zentrol-teal-500 hover:bg-zentrol-teal-400 border-none text-white" onclick="Reveal.next()" aria-label="Next slide">
-                    <span>Next</span>
-                    <span class="text-base" aria-hidden="true">▶</span>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-3 py-2 rounded-xl cursor-pointer text-xs font-semibold transition-all duration-200 whitespace-nowrap hover:bg-zentrol-teal-400 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="Reveal.next()" aria-label="Next slide">
+                    <span>Next</span><span class="text-base" aria-hidden="true">▶</span>
                 </button>
-                <button class="control-btn btn btn-xs md:btn-sm w-full gap-1.5 normal-case bg-zentrol-teal-700 hover:bg-zentrol-teal-600 border-none text-white" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
-                    <span class="text-base" aria-hidden="true">⛶</span>
-                    <span>Fullscreen</span>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-3 py-2 rounded-xl cursor-pointer text-xs font-semibold transition-all duration-200 whitespace-nowrap hover:bg-zentrol-teal-400 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
+                    <span class="text-base" aria-hidden="true">⛶</span><span>Full</span>
+                </button>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-3 py-2 rounded-xl cursor-pointer text-xs font-semibold transition-all duration-200 whitespace-nowrap hover:bg-zentrol-teal-400 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="if (document.fullscreenElement) document.exitFullscreen();" aria-label="Exit fullscreen">
+                    <span class="text-base" aria-hidden="true">⤫</span><span>Exit</span>
+                </button>
+                <button class="control-btn col-span-2 bg-zentrol-teal-500 text-white border-none px-3 py-2 rounded-xl cursor-pointer text-xs font-semibold transition-all duration-200 whitespace-nowrap hover:bg-zentrol-teal-400 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="Reveal.slide(0)" aria-label="Reset to first slide">
+                    <span class="text-base" aria-hidden="true">↺</span><span>Reset</span>
                 </button>
             </nav>
+
+            <!-- ── Narration Panel (inside sidebar) ── -->
+            <div id="narration-panel" style="max-height: 220px;">
+                <div class="p-3 flex flex-col gap-2">
+
+                    <!-- Row 1: title + speaking dot + status -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] font-bold text-zentrol-teal-300 uppercase tracking-widest">Narration</span>
+                            <span id="narration-speaking-dot" role="status" aria-label="Speaking"></span>
+                        </div>
+                        <span id="narration-status-text" class="text-[10px] text-zentrol-gray-400 font-mono">On</span>
+                    </div>
+
+                    <!-- Row 2: Toggle + Replay buttons -->
+                    <div class="flex gap-1.5">
+                        <button
+                            id="narration-toggle-btn"
+                            class="narration-on flex-1 rounded-full py-1.5 text-[11px] font-bold tracking-wide transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-400"
+                            aria-pressed="true"
+                            title="Narration on — click to disable"
+                            onclick="window.narrationManager?.toggle()">
+                            🔊 Toggle
+                        </button>
+                        <button
+                            id="narration-replay-btn"
+                            class="flex-1 rounded-full py-1.5 text-[11px] font-bold tracking-wide bg-zentrol-navy-600 text-zentrol-teal-300 hover:bg-zentrol-navy-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-400"
+                            title="Replay narration for this slide"
+                            onclick="window.narrationManager?.replayCurrentSlide()">
+                            ↺ Replay
+                        </button>
+                    </div>
+
+                    <!-- Row 3: Speed slider -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-zentrol-gray-400 w-10 flex-shrink-0">Speed</span>
+                        <input
+                            id="narration-rate-slider"
+                            type="range" min="0.5" max="1.8" step="0.05" value="0.95"
+                            class="narration-slider flex-1"
+                            aria-label="Speech rate"
+                            oninput="window.narrationManager?.setRate(parseFloat(this.value)); document.getElementById('narration-rate-val').textContent = parseFloat(this.value).toFixed(2) + '×'">
+                        <span id="narration-rate-val" class="text-[10px] font-mono text-zentrol-teal-300 w-8 text-right">0.95×</span>
+                    </div>
+
+                    <!-- Row 4: Volume slider -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-zentrol-gray-400 w-10 flex-shrink-0">Vol</span>
+                        <input
+                            id="narration-vol-slider"
+                            type="range" min="0" max="1" step="0.05" value="1"
+                            class="narration-slider flex-1"
+                            aria-label="Speech volume"
+                            oninput="window.narrationManager?.setVolume(parseFloat(this.value))">
+                        <span class="text-[10px] font-mono text-zentrol-teal-300 w-8 text-right">🔊</span>
+                    </div>
+
+                </div>
+            </div>
         </aside>
 
         <!-- Header: logo only -->
@@ -396,15 +471,14 @@
 
     </main>
 
-    <!-- JavaScript Libraries -->
+    <!-- JS Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
-
-    <!-- MediaPipe Dependencies -->
     <script src="{% static 'mediapipe/hands.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
-    <!-- Custom Scripts -->
+    <!-- Custom Scripts (load order matters) -->
     <script src="{% static 'js/gesture_engine.js' %}"></script>
+    <script src="{% static 'js/narration.js' %}"></script>
     <script src="{% static 'js/presentation.js' %}"></script>
 
     <!-- Main Application Script -->
@@ -427,140 +501,229 @@
             margin: 0,
             minScale: 1,
             maxScale: 1,
-            
-            // Accessibility
             keyboardCondition: 'focused',
-            
-            // Performance
             viewDistance: 3,
             mobileViewDistance: 2
         });
 
         // ================================================================
+        // Load slides from sessionStorage (set by home.html upload)
+        // Falls back to static slides gracefully
+        // ================================================================
+        let uploadedSlides = [];
+
+        function loadUploadedSlides() {
+            try {
+                const raw = sessionStorage.getItem('zentrol_slides');
+                if (!raw) return false;
+                uploadedSlides = JSON.parse(raw);
+                if (!Array.isArray(uploadedSlides) || uploadedSlides.length === 0) return false;
+                console.log(`📂 Loaded ${uploadedSlides.length} uploaded slides from session`);
+                return true;
+            } catch (e) {
+                console.warn('Could not load uploaded slides:', e);
+                return false;
+            }
+        }
+
+        function injectUploadedSlides(slides) {
+            const slidesContainer = document.querySelector('.reveal .slides');
+            if (!slidesContainer) return;
+
+            // Clear existing static slides
+            slidesContainer.innerHTML = '';
+
+            slides.forEach((slide, i) => {
+                const section = document.createElement('section');
+
+                if (slide.imageUrl) {
+                    const img = document.createElement('img');
+                    img.src = slide.imageUrl;
+                    img.alt = slide.text
+                        ? slide.text.substring(0, 120)
+                        : `Slide ${i + 1}`;
+                    img.style.maxWidth = 'calc(100% - 40px)';
+                    img.style.maxHeight = 'calc(100% - 40px)';
+                    img.style.objectFit = 'contain';
+                    img.style.borderRadius = '12px';
+                    img.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)';
+                    section.appendChild(img);
+                } else {
+                    // Text-only fallback slide
+                    section.style.cssText = `
+                        background: #fff; padding: 40px; border-radius: 16px;
+                        text-align: left; color: #0F1E2E;
+                        max-width: calc(100% - 80px); max-height: calc(100% - 80px);
+                        overflow: hidden;
+                    `;
+                    const slideNum = document.createElement('p');
+                    slideNum.textContent = `Slide ${i + 1}`;
+                    slideNum.style.cssText = 'font-size:12px; color:#9CA3AF; margin-bottom:16px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;';
+                    section.appendChild(slideNum);
+
+                    const content = document.createElement('p');
+                    content.textContent = slide.text || '(No text on this slide)';
+                    content.style.cssText = 'font-size:18px; line-height:1.7; color:#1F2933;';
+                    section.appendChild(content);
+                }
+
+                slidesContainer.appendChild(section);
+            });
+
+            // Sync Reveal after DOM update
+            setTimeout(() => {
+                Reveal.sync();
+                Reveal.slide(0);
+            }, 100);
+        }
+
+        // Inject uploaded slides as narration scripts into NarrationManager
+        function patchNarrationScripts(slides) {
+            slides.forEach((slide, i) => {
+                // Priority: real slide text → speaker notes → nothing
+                const text = (slide.text && slide.text.trim())
+                    ? slide.text.trim()
+                    : (slide.notes && slide.notes.trim())
+                        ? slide.notes.trim()
+                        : null;
+
+                if (text) {
+                    window.narrationManager.setSlideScript(i, text);
+                }
+            });
+            console.log('✅ Narration scripts patched with real slide text');
+        }
+
+        // Show/hide "change file" button based on whether slides are loaded
+        function updateChangeFileBtn(hasFile) {
+            const btn = document.getElementById('change-file-btn');
+            if (btn) btn.style.display = hasFile ? 'flex' : 'none';
+        }
+
+        // ================================================================
+        // Initialize Narration Manager
+        // ================================================================
+        window.narrationManager = new NarrationManager({
+            rate: 0.95,
+            pitch: 1.0,
+            volume: 1.0,
+            autoNarrate: true,
+            debug: false
+        });
+
+        // Wire up speaking dot animation
+        window.narrationManager.onSpeakStart = () => {
+            const dot = document.getElementById('narration-speaking-dot');
+            if (dot) dot.classList.add('active');
+        };
+        window.narrationManager.onSpeakEnd = () => {
+            const dot = document.getElementById('narration-speaking-dot');
+            if (dot) dot.classList.remove('active');
+        };
+
+        // Hook into Reveal.js slide changes
+        Reveal.addEventListener('slidechanged', (event) => {
+            window.narrationManager.narrateSlide(event.indexh);
+        });
+
+        // After Reveal is ready: inject slides + patch narration
+        Reveal.addEventListener('ready', () => {
+            const hasUploaded = loadUploadedSlides();
+
+            if (hasUploaded) {
+                injectUploadedSlides(uploadedSlides);
+                patchNarrationScripts(uploadedSlides);
+                updateChangeFileBtn(true);
+                console.log('✅ Presentation running from uploaded PPTX');
+            } else {
+                updateChangeFileBtn(false);
+                console.log('ℹ️ No uploaded file — using static slides + default scripts');
+            }
+
+            // Narrate first slide after a short settle delay
+            setTimeout(() => {
+                window.narrationManager.narrateSlide(0);
+            }, 1400);
+        });
+
+        // ================================================================
+        // ok gesture → toggle narration  (reassigned from duplicate reset)
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.GESTURE_ACTION_MAP) {
+                GESTURE_ACTION_MAP['ok'] = 'toggleNarration';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.PresentationController) {
+                PresentationController.prototype.toggleNarration = function() {
+                    const enabled = window.narrationManager?.toggle();
+                    console.log(`🔊 Narration ${enabled ? 'enabled' : 'disabled'} via gesture`);
+                };
+            }
+        });
+
+        // ================================================================
         // Initialize Gesture Engine
         // ================================================================
-        var videoElement = document.getElementById('camera-feed');
-        var gestureEngine = new GestureEngine({
+        const videoElement = document.getElementById('camera-feed');
+        const gestureEngine = new GestureEngine({
             profile: 'balanced',  // Options: 'responsive', 'balanced', 'high-accuracy'
             debug: false          // Set to true for development
         });
 
         async function initializeGestureControl() {
             console.log('🎬 Starting gesture control initialization...');
-
             try {
                 const success = await gestureEngine.start(videoElement);
-
                 if (success) {
                     console.log('✅ Gesture control initialized successfully');
                     startPerformanceMonitoring();
                 } else {
                     throw new Error('Gesture engine failed to start');
                 }
-
             } catch (error) {
                 console.error('❌ Initialization failed:', error);
-                
                 const statusEl = document.getElementById('loading-status');
                 if (statusEl) {
                     statusEl.innerHTML = `
                         <span class="text-red-400">
                             ⚠️ Failed to initialize gesture control<br>
                             <small>${error.message}</small>
-                        </span>
-                    `;
+                        </span>`;
                 }
-
-                // Hide overlay after delay
                 setTimeout(() => {
                     const overlay = document.getElementById('loading-overlay');
-                    if (overlay) {
-                        overlay.style.display = 'none';
-                    }
+                    if (overlay) overlay.style.display = 'none';
                 }, 3000);
             }
         }
 
         // ================================================================
-        // Performance Monitoring (FIXED)
+        // Performance Monitoring
         // ================================================================
         function startPerformanceMonitoring() {
             setInterval(() => {
-                // Safe access with null checks
-                if (!gestureEngine || !gestureEngine.metrics) return;
-                
+                if (!gestureEngine?.metrics) return;
                 const metrics = gestureEngine.metrics.getMetrics();
-                
                 const fpsEl = document.getElementById('fps-counter');
                 const latencyEl = document.getElementById('latency-counter');
-                
                 if (fpsEl) fpsEl.textContent = Math.round(metrics.fps);
                 if (latencyEl) latencyEl.textContent = Math.round(metrics.avgDetectionTime);
             }, 1000);
         }
 
         // ================================================================
-        // Cleanup on Page Unload
+        // Cleanup
         // ================================================================
         window.addEventListener('beforeunload', () => {
-            if (gestureEngine) {
-                gestureEngine.stop();
-            }
+            window.narrationManager?.stop();
+            gestureEngine?.stop();
         });
 
-        // ================================================================
-        // Start Application
-        // ================================================================
         window.addEventListener('load', () => {
             initializeGestureControl();
-            
-            // Mobile: toggle side panels
-            const videoPanel = document.getElementById('video-info-panel');
-            const controlsPanel = document.getElementById('controls-gesture-panel');
-            const videoBtn = document.getElementById('toggle-video-panel-btn');
-            const controlsBtn = document.getElementById('toggle-controls-panel-btn');
-            const filmstrip = document.getElementById('slide-filmstrip');
-            const filmstripBtn = document.getElementById('toggle-filmstrip-btn');
-
-            function isMobile() {
-                return window.innerWidth < 768;
-            }
-
-            if (videoBtn && videoPanel) {
-                videoBtn.addEventListener('click', () => {
-                    if (!isMobile()) return;
-                    videoPanel.classList.toggle('hidden');
-                    videoPanel.classList.toggle('flex');
-                });
-            }
-
-            if (controlsBtn && controlsPanel) {
-                controlsBtn.addEventListener('click', () => {
-                    if (!isMobile()) return;
-                    controlsPanel.classList.toggle('hidden');
-                    controlsPanel.classList.toggle('flex');
-                });
-            }
-
-            // Desktop: toggle filmstrip & adjust video panel to avoid overlap
-            if (filmstripBtn && filmstrip) {
-                filmstripBtn.addEventListener('click', () => {
-                    const isHidden = filmstrip.classList.contains('hidden');
-                    filmstrip.classList.toggle('hidden', !isHidden ? true : false);
-                    filmstrip.classList.toggle('flex', isHidden);
-                });
-            }
-
-            // Slide filmstrip thumbnail navigation
-            const thumbs = document.querySelectorAll('.slide-thumb[data-slide-index]');
-            thumbs.forEach((thumb) => {
-                thumb.addEventListener('click', () => {
-                    const index = parseInt(thumb.dataset.slideIndex || '0', 10);
-                    if (!Number.isNaN(index) && window.Reveal) {
-                        window.Reveal.slide(index);
-                    }
-                });
-            });
         });
 
         // ================================================================
@@ -568,17 +731,12 @@
         // ================================================================
         window.addEventListener('error', (event) => {
             console.error('Global error:', event.error);
-            
-            // Prevent complete failure
             event.preventDefault();
         });
 
-        // ================================================================
-        // Keyboard Shortcuts Info (CORRECTED)
-        // ================================================================
         console.log(`
 ╔════════════════════════════════════════════════════════╗
-║  GESTURE-CONTROLLED PRESENTATION                       ║
+║  ZENTROL – GESTURE-CONTROLLED PRESENTATION             ║
 ╠════════════════════════════════════════════════════════╣
 ║  Gestures:                                             ║
 ║    👍 Thumbs Up     → Previous Slide                  ║
@@ -586,16 +744,18 @@
 ║    🖐️ Open Palm     → Toggle Fullscreen               ║
 ║    ✊ Fist          → Exit Fullscreen                 ║
 ║    ☝️ Point Up      → Reset to First Slide            ║
+║    👌 OK Sign       → Toggle Narration  ← NEW         ║
 ║                                                        ║
-║  Keyboard Shortcuts:                                   ║
-║    Ctrl/Cmd + F     → Toggle Fullscreen               ║
-║    Ctrl/Cmd + R     → Reset Presentation              ║
-║    Arrow Keys       → Navigate Slides                 ║
+║  Narration:                                            ║
+║    • Auto-reads each slide on change                  ║
+║    • Speed & volume sliders in sidebar                ║
+║    • Replay button for current slide                  ║
+║    • Edit SLIDE_SCRIPTS in narration.js to customize  ║
 ╚════════════════════════════════════════════════════════╝
         `);
     </script>
 
-    <!-- Structured Data for SEO -->
+    <!-- Structured Data -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -604,11 +764,7 @@
         "description": "Interactive presentation system controlled by hand gestures using MediaPipe and AI",
         "applicationCategory": "Presentation Software",
         "operatingSystem": "Web Browser",
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-        }
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
     }
     </script>
 </body>
