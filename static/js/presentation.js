@@ -63,20 +63,38 @@ class FullscreenAPI {
         if (!this.container) return;
         
         this.fakeFullscreenActive = true;
-        document.body.classList.add('fake-fullscreen-active');
-        this.container.classList.add('fake-fullscreen');
-        
-        // Hide UI elements that should be hidden in fullscreen
+        document.body.classList.add('overflow-hidden');
+
+        // Tailwind utility classes for fullscreen layout instead of custom CSS
+        this.container.classList.add(
+            'fixed',
+            'inset-0',
+            'w-screen',
+            'h-screen',
+            'z-[9999]',
+            'bg-gradient-to-br',
+            'from-zentrol-navy-500',
+            'to-zentrol-teal-600',
+            'pt-0',
+            'pl-0'
+        );
+
+        // Make Reveal container use full viewport
+        const revealEl = this.container.querySelector('.reveal');
+        if (revealEl) {
+            revealEl.classList.add('w-screen', 'h-screen');
+        }
+
+        // Hide header and mobile controls while in fullscreen
         const elementsToHide = [
-            '#camera-container',
             '.gesture-guide',
-            '.controls'
+            'nav.md\\:hidden'
         ];
-        
+
         elementsToHide.forEach(selector => {
             const el = document.querySelector(selector);
             if (el) {
-                el.classList.add('hidden-in-fake-fullscreen');
+                el.classList.add('opacity-0', 'pointer-events-none');
             }
         });
         
@@ -88,20 +106,39 @@ class FullscreenAPI {
         if (!this.container) return;
         
         this.fakeFullscreenActive = false;
-        document.body.classList.remove('fake-fullscreen-active');
-        this.container.classList.remove('fake-fullscreen');
-        
+        document.body.classList.remove('overflow-hidden');
+
+        // Remove fullscreen layout classes
+        this.container.classList.remove(
+            'fixed',
+            'inset-0',
+            'w-screen',
+            'h-screen',
+            'z-[9999]',
+            'bg-gradient-to-br',
+            'from-zentrol-navy-500',
+            'to-zentrol-teal-600',
+            'pt-0',
+            'pl-0'
+        );
+
+        // Reset Reveal container height/width back to default
+        const revealEl = this.container.querySelector('.reveal');
+        if (revealEl) {
+            revealEl.classList.remove('w-screen', 'h-screen');
+            revealEl.classList.add('h-[calc(100vh-50px)]', 'w-full');
+        }
+
         // Show UI elements again
         const elementsToShow = [
-            '#camera-container',
             '.gesture-guide',
-            '.controls'
+            'nav.md\\:hidden'
         ];
-        
+
         elementsToShow.forEach(selector => {
             const el = document.querySelector(selector);
             if (el) {
-                el.classList.remove('hidden-in-fake-fullscreen');
+                el.classList.remove('opacity-0', 'pointer-events-none');
             }
         });
         
@@ -384,29 +421,10 @@ class FeedbackManager {
         }
     }
 
-    updateSlideIndicator(current, total) {
-        let indicator = document.getElementById('slide-indicator');
-        
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'slide-indicator';
-            indicator.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: rgba(0, 0, 0, 0.8);
-                color: white;
-                padding: 8px 15px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: bold;
-                z-index: 1000;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            `;
-            document.body.appendChild(indicator);
-        }
-
-        indicator.textContent = `Slide ${current + 1} / ${total}`;
+    updateSlideIndicator() {
+        // Removed per UI request (it overlaps mobile controls).
+        const indicator = document.getElementById('slide-indicator');
+        if (indicator) indicator.remove();
     }
 }
 
@@ -732,7 +750,24 @@ class PresentationController {
     }
 
     updateSlideInfo() {
-        this.feedback.updateSlideIndicator(this.currentSlide, this.totalSlides);
+        this.feedback.updateSlideIndicator();
+
+        // Highlight active thumbnail in filmstrip if present
+        const thumbs = document.querySelectorAll('.slide-thumb[data-slide-index]');
+        thumbs.forEach((thumb) => {
+            const idx = parseInt(thumb.dataset.slideIndex || '0', 10);
+            if (idx === this.currentSlide) {
+                thumb.classList.add('ring-2', 'ring-zentrol-teal-500', 'bg-white');
+            } else {
+                thumb.classList.remove('ring-2', 'ring-zentrol-teal-500');
+            }
+        });
+
+        // Update slide count label in filmstrip header
+        const label = document.getElementById('slide-count-label');
+        if (label && this.totalSlides > 0) {
+            label.textContent = `${this.currentSlide + 1} / ${this.totalSlides}`;
+        }
     }
 
     hideLoadingOverlay() {
