@@ -37,7 +37,7 @@ class NarrationManager {
             pitch: options.pitch ?? 1.0,         // Pitch (0.0 – 2.0)
             volume: options.volume ?? 1.0,       // Volume (0.0 – 1.0)
             voiceLang: options.voiceLang ?? 'en-US',
-            autoNarrate: options.autoNarrate ?? true,  // Narrate on slide change
+            autoNarrate: options.autoNarrate ?? false,  // Off by default; user or gesture enables
             debug: options.debug ?? false
         };
 
@@ -52,7 +52,28 @@ class NarrationManager {
         this.onSpeakEnd = null;
         this.onToggle = null;
 
+        /** @type {number|null} */
+        this._waveRaf = null;
+        /** Time (seconds) for waveform oscillators */
+        this._waveTime = 0;
+        /** Energy bump on word/sentence boundaries (0–1), decays each frame */
+        this._waveSpeechPulse = 0;
+        /** Smoothed bar heights for organic motion */
+        this._waveSmoothed = null;
+
+        /** Live sliders: restart remaining text (mutating utterance mid-speech is ignored in most browsers) */
+        this._speechCurrentText = '';
+        this._speechCharIndex = 0;
+        this._hadBoundary = false;
+        this._intentionalRestart = false;
+        /** @type {ReturnType<typeof setTimeout>|null} */
+        this._liveParamTimer = null;
+        /** performance.now() at utterance onstart — fallback when charIndex stays 0 */
+        this._speechStartT = 0;
+
         this._init();
+        this._updateToggleButton();
+        requestAnimationFrame(() => this._resetWaveformBars());
     }
 
     // -------------------------------------------------------------------------
@@ -122,39 +143,91 @@ class NarrationManager {
             this.stop();
         }
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate   = this.options.rate;
-        utterance.pitch  = this.options.pitch;
-        utterance.volume = this.options.volume;
-        utterance.lang   = this.options.voiceLang;
+        this._speechCurrentText = text;
+        this._speechCharIndex = 0;
+        this._hadBoundary = false;
+        this._enqueueUtterance(text);
+    }
 
+    _createUtterance(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = this.options.rate;
+        utterance.pitch = this.options.pitch;
+        utterance.volume = this.options.volume;
+        utterance.lang = this.options.voiceLang;
         if (this.selectedVoice) {
             utterance.voice = this.selectedVoice;
         }
+        return utterance;
+    }
+
+    _attachUtteranceHandlers(utterance) {
+        utterance.onboundary = (e) => {
+            if (typeof e.charIndex === 'number') {
+                this._speechCharIndex = e.charIndex;
+                this._hadBoundary = true;
+            }
+            const n = e && e.name;
+            const bump = n === 'word' || n === 'sentence' ? 0.32 : 0.18;
+            this._waveSpeechPulse = Math.min(1, this._waveSpeechPulse + bump);
+        };
 
         utterance.onstart = () => {
             this.isSpeaking = true;
+            this.currentUtterance = utterance;
+            this._speechStartT = performance.now();
+            this._waveSpeechPulse = 0.38;
+            this._startWaveformLoop();
             this._updateUIState();
-            if (typeof this.onSpeakStart === 'function') this.onSpeakStart(text);
-            this._log('info', `🔊 Speaking: "${text.substring(0, 60)}..."`);
+            const t = this._speechCurrentText || '';
+            if (typeof this.onSpeakStart === 'function') this.onSpeakStart(t);
+            this._log('info', `🔊 Speaking: "${t.substring(0, 60)}..."`);
         };
 
         utterance.onend = () => {
+            if (this._intentionalRestart) return;
             this.isSpeaking = false;
+            this.currentUtterance = null;
+            this._speechCurrentText = '';
+            this._speechCharIndex = 0;
+            this._hadBoundary = false;
+            this._speechStartT = 0;
+            this._stopWaveformLoop();
+            this._resetWaveformBars();
             this._updateUIState();
             if (typeof this.onSpeakEnd === 'function') this.onSpeakEnd();
         };
 
         utterance.onerror = (e) => {
-            // 'interrupted' is not a real error — it fires when stop() is called
+            if (this._intentionalRestart) {
+                return;
+            }
             if (e.error !== 'interrupted' && e.error !== 'canceled') {
                 this._log('warn', `Speech error: ${e.error}`);
             }
             this.isSpeaking = false;
+            this.currentUtterance = null;
+            this._speechCurrentText = '';
+            this._speechCharIndex = 0;
+            this._hadBoundary = false;
+            this._speechStartT = 0;
+            this._stopWaveformLoop();
+            this._resetWaveformBars();
             this._updateUIState();
         };
+    }
 
+    _enqueueUtterance(text) {
+        const utterance = this._createUtterance(text);
+        this._attachUtteranceHandlers(utterance);
         this.currentUtterance = utterance;
+        try {
+            if (typeof speechSynthesis !== 'undefined' && speechSynthesis.paused) {
+                speechSynthesis.resume();
+            }
+        } catch (_) {
+            /* ignore */
+        }
         speechSynthesis.speak(utterance);
     }
 
@@ -162,10 +235,22 @@ class NarrationManager {
      * Stop any current speech immediately.
      */
     stop() {
+        if (this._liveParamTimer) {
+            clearTimeout(this._liveParamTimer);
+            this._liveParamTimer = null;
+        }
         if ('speechSynthesis' in window) {
             speechSynthesis.cancel();
         }
         this.isSpeaking = false;
+        this.currentUtterance = null;
+        this._speechCurrentText = '';
+        this._speechCharIndex = 0;
+        this._hadBoundary = false;
+        this._intentionalRestart = false;
+        this._speechStartT = 0;
+        this._stopWaveformLoop();
+        this._resetWaveformBars();
         this._updateUIState();
     }
 
@@ -232,16 +317,121 @@ class NarrationManager {
     // Settings
     // -------------------------------------------------------------------------
 
+    /**
+     * Assign rate/volume/pitch on the active utterance (often ignored until pause/resume or restart).
+     */
+    _applyLiveUtteranceProps() {
+        if (!this.isSpeaking || !this.currentUtterance) return;
+        const u = this.currentUtterance;
+        try {
+            u.rate = this.options.rate;
+            u.volume = this.options.volume;
+            u.pitch = this.options.pitch;
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
+    /**
+     * Some engines pick up property changes only after pause/resume (first ~word only).
+     */
+    _flushSpeechParamsWithPauseResume() {
+        try {
+            if (typeof speechSynthesis === 'undefined' || !speechSynthesis.speaking) return;
+            speechSynthesis.pause();
+            requestAnimationFrame(() => {
+                try {
+                    speechSynthesis.resume();
+                } catch (_) {
+                    /* ignore */
+                }
+            });
+        } catch (_) {
+            /* ignore */
+        }
+    }
+
+    /**
+     * Re-apply speed/volume by cancelling and speaking the unread remainder.
+     * Web Speech API generally ignores live edits to rate/volume on the current utterance.
+     */
+    _applyLiveUtterancePropsFromSliders() {
+        if (!this.isSpeaking) return;
+        this._applyLiveUtteranceProps();
+
+        const text = this._speechCurrentText;
+        if (!text || !text.length) {
+            this._flushSpeechParamsWithPauseResume();
+            return;
+        }
+
+        let idx = Math.max(0, Math.min(this._speechCharIndex, text.length));
+        // If no boundary index yet, estimate position from elapsed time (~chars/sec)
+        if (idx < 1 && text.length > 32) {
+            const elapsed = performance.now() - this._speechStartT;
+            const cps = 11 * this.options.rate;
+            const guess = Math.floor((elapsed / 1000) * cps);
+            if (guess >= 6 && guess < text.length - 5) {
+                idx = guess;
+            }
+        }
+        if (idx < 1) {
+            this._flushSpeechParamsWithPauseResume();
+            return;
+        }
+
+        let remaining = text.slice(idx).trimStart();
+        if (!remaining.length) {
+            this._flushSpeechParamsWithPauseResume();
+            return;
+        }
+
+        this._intentionalRestart = true;
+        speechSynthesis.cancel();
+
+        window.setTimeout(() => {
+            this._intentionalRestart = false;
+            if (!this.isEnabled) return;
+            this._speechCurrentText = remaining;
+            this._speechCharIndex = 0;
+            this._hadBoundary = false;
+            this._enqueueUtterance(remaining);
+        }, 32);
+    }
+
+    _scheduleLiveParamApply() {
+        if (this._liveParamTimer) {
+            clearTimeout(this._liveParamTimer);
+            this._liveParamTimer = null;
+        }
+        if (!this.isSpeaking) return;
+        this._liveParamTimer = setTimeout(() => {
+            this._liveParamTimer = null;
+            this._applyLiveUtterancePropsFromSliders();
+        }, 45);
+    }
+
     setRate(rate) {
         this.options.rate = Math.max(0.5, Math.min(2.0, rate));
+        const rateVal = document.getElementById('narration-rate-val');
+        const rateSlider = document.getElementById('narration-rate-slider');
+        if (rateVal) rateVal.textContent = `${this.options.rate.toFixed(2)}×`;
+        if (rateSlider) rateSlider.value = String(this.options.rate);
+        this._scheduleLiveParamApply();
     }
 
     setPitch(pitch) {
         this.options.pitch = Math.max(0.0, Math.min(2.0, pitch));
+        this._scheduleLiveParamApply();
     }
 
     setVolume(volume) {
         this.options.volume = Math.max(0.0, Math.min(1.0, volume));
+        const volVal = document.getElementById('narration-vol-val');
+        const volSlider = document.getElementById('narration-vol-slider');
+        if (volVal) volVal.textContent = `${Math.round(this.options.volume * 100)}%`;
+        if (volSlider) volSlider.value = String(this.options.volume);
+        this._scheduleLiveParamApply();
     }
 
     getAvailableVoices() {
@@ -296,6 +486,105 @@ class NarrationManager {
     }
 
     // -------------------------------------------------------------------------
+    // Waveform (driven by RAF + speech boundaries; Web Speech API exposes no PCM)
+    // -------------------------------------------------------------------------
+
+    _stopWaveformLoop() {
+        if (this._waveRaf != null) {
+            cancelAnimationFrame(this._waveRaf);
+            this._waveRaf = null;
+        }
+    }
+
+    /**
+     * Idle bell-shaped bar heights (no container background — bars only).
+     */
+    _resetWaveformBars() {
+        const strip = document.getElementById('narration-wave-strip');
+        if (!strip) return;
+        const bars = strip.querySelectorAll('.narration-wave-bar');
+        const n = bars.length;
+        if (!n) return;
+        if (!this._waveSmoothed || this._waveSmoothed.length !== n) {
+            this._waveSmoothed = new Float32Array(n);
+        }
+        const center = (n - 1) / 2;
+        const maxSpan = Math.max(0.5, center);
+        for (let i = 0; i < n; i++) {
+            const env = Math.cos(((i - center) / maxSpan) * (Math.PI * 0.5));
+            const envPos = Math.max(0, env) ** 1.12;
+            const h = 4 + envPos * 18;
+            this._waveSmoothed[i] = h;
+            bars[i].style.height = `${Math.round(h)}px`;
+            bars[i].style.opacity = '';
+            bars[i].style.background = 'rgba(255,255,255,0.22)';
+            bars[i].style.boxShadow = 'none';
+        }
+    }
+
+    _startWaveformLoop() {
+        this._stopWaveformLoop();
+        const strip = document.getElementById('narration-wave-strip');
+        if (!strip) return;
+        const bars = strip.querySelectorAll('.narration-wave-bar');
+        const n = bars.length;
+        if (!n) return;
+        if (!this._waveSmoothed || this._waveSmoothed.length !== n) {
+            this._waveSmoothed = new Float32Array(n);
+        }
+        const center = (n - 1) / 2;
+        const maxSpan = Math.max(0.5, center);
+        for (let i = 0; i < n; i++) {
+            const env = Math.cos(((i - center) / maxSpan) * (Math.PI * 0.5));
+            const envPos = Math.max(0, env) ** 1.12;
+            this._waveSmoothed[i] = 4 + envPos * 18;
+        }
+
+        const tick = () => {
+            if (!this.isSpeaking) {
+                this._resetWaveformBars();
+                return;
+            }
+            const t = performance.now() * 0.001;
+            this._waveTime = t;
+            this._waveSpeechPulse *= 0.94;
+            // Fallback motion when boundary events are sparse (Safari / some voices)
+            if (Math.random() < 0.02) {
+                this._waveSpeechPulse = Math.min(1, this._waveSpeechPulse + 0.1);
+            }
+
+            const pitch = this.options.pitch;
+            const rate = this.options.rate;
+            const vol = this.options.volume;
+
+            for (let i = 0; i < n; i++) {
+                const env = Math.cos(((i - center) / maxSpan) * (Math.PI * 0.5));
+                const envPos = Math.max(0, env) ** 1.12;
+                const t1 = this._waveTime * (2.2 + rate * 1.2) + i * 0.42;
+                const t2 = this._waveTime * (3.5 + pitch * 2.4) - i * 0.28;
+                const mixed =
+                    0.42 * Math.sin(t1 * 8.2) +
+                    0.33 * Math.sin(t2 * 5.1 + pitch) +
+                    0.25 * Math.sin((this._waveTime + i * 0.2) * (11 + pitch * 3));
+                const norm = (mixed + 1) * 0.5;
+                const pulse = 0.22 + 0.78 * this._waveSpeechPulse;
+                const amp = envPos * (0.32 + 0.68 * norm) * pulse * vol;
+                const target = 4 + amp * 22;
+                const prev = this._waveSmoothed[i];
+                this._waveSmoothed[i] = prev + (target - prev) * 0.38;
+                const h = this._waveSmoothed[i];
+                bars[i].style.height = `${Math.round(h)}px`;
+                const glow = 0.55 + 0.45 * Math.min(1, h / 26);
+                bars[i].style.opacity = String(Math.min(1, glow));
+                bars[i].style.background = 'rgba(255,255,255,0.92)';
+                bars[i].style.boxShadow = '0 0 6px rgba(255,255,255,0.32)';
+            }
+            this._waveRaf = requestAnimationFrame(tick);
+        };
+        this._waveRaf = requestAnimationFrame(tick);
+    }
+
+    // -------------------------------------------------------------------------
     // UI Updates
     // -------------------------------------------------------------------------
 
@@ -305,6 +594,10 @@ class NarrationManager {
         if (indicator) {
             indicator.style.opacity = this.isSpeaking ? '1' : '0';
         }
+
+        // Single waveform strip above Toggle + Replay
+        const waveStrip = document.getElementById('narration-wave-strip');
+        if (waveStrip) waveStrip.classList.toggle('narration-waves-active', this.isSpeaking);
 
         // Update the narration status text
         const statusText = document.getElementById('narration-status-text');

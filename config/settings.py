@@ -19,7 +19,8 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-key-change-in-produc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1','*'])
+# Never use '*' in production — set explicit hosts / domains.
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 # Application definition
 INSTALLED_APPS = [
@@ -32,6 +33,7 @@ INSTALLED_APPS = [
     
     # Third party
     'rest_framework',
+    'drf_spectacular',
     'corsheaders',
     
     # Local apps
@@ -147,7 +149,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS Settings (for ngrok/local development)
+# Browser clients allowed to call the API (same-origin Django pages + any extra dev origins).
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:8000',
     'http://127.0.0.1:8000',
@@ -155,8 +157,10 @@ CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
 
 CORS_ALLOW_CREDENTIALS = True
 
-# CSRF settings for ngrok
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+])
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -169,9 +173,26 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
-        'user': '1000/hour'
-    }
+        'user': '1000/hour',
+        'gesture_log': '300/hour',
+    },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+# OpenAPI / Swagger (drf-spectacular)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Zentrol API',
+    'DESCRIPTION': 'Gesture-controlled presentation system — REST API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+# Expose /api/schema/ and /api/docs/ outside DEBUG (default False — use staff + Django admin or env).
+SPECTACULAR_PUBLIC = env.bool('SPECTACULAR_PUBLIC', default=False)
+
+# Optional shared secret for POST /api/log-gesture/ (optional header X-Zentrol-Gesture-Log-Secret).
+# If set, requests without matching X-Zentrol-Gesture-Log-Secret header get 403.
+GESTURE_LOG_SHARED_SECRET = env('GESTURE_LOG_SHARED_SECRET', default='').strip()
 
 # Production Security Settings
 # =============================
