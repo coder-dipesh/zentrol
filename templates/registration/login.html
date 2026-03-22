@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Zentrol</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+  <main class="mx-auto flex min-h-screen max-w-md items-center px-4">
+    <section class="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h1 class="text-2xl font-semibold">Login</h1>
+      <p class="mt-1 text-sm text-slate-500">Access your dashboard and presentations.</p>
+      <form method="post" class="mt-6 space-y-4">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<p class="text-sm text-red-600">{{ form.non_field_errors|striptags }}</p>{% endif %}
+        <div>
+          <label for="{{ form.username.id_for_label }}" class="mb-1 block text-sm font-medium">Username</label>
+          <div class="[&>input]:w-full [&>input]:rounded-lg [&>input]:border [&>input]:border-slate-300 [&>input]:px-3 [&>input]:py-2">{{ form.username }}</div>
+        </div>
+        <div>
+          <label for="{{ form.password.id_for_label }}" class="mb-1 block text-sm font-medium">Password</label>
+          <div class="[&>input]:w-full [&>input]:rounded-lg [&>input]:border [&>input]:border-slate-300 [&>input]:px-3 [&>input]:py-2">{{ form.password }}</div>
+        </div>
+        <button type="submit" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">Login</button>
+      </form>
+      <div class="mt-4 flex justify-between text-sm">
+        <a href="{% url 'register' %}" class="text-teal-700">Create account</a>
+        <a href="{% url 'password_reset' %}" class="text-teal-700">Forgot password?</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

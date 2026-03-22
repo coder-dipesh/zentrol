@@ -684,6 +684,7 @@ class GestureEngine {
             // Batch reads
             const iconEl = document.getElementById('gesture-icon');
             const nameEl = document.getElementById('gesture-name');
+            const detailEl = document.getElementById('gesture-status-detail');
             const confEl = document.getElementById('confidence-bar');
             const fpsEl = document.getElementById('fps-counter');
             const latencyEl = document.getElementById('latency-counter');
@@ -691,6 +692,11 @@ class GestureEngine {
             // Batch writes
             if (iconEl) iconEl.textContent = icons[gesture] || '❓';
             if (nameEl) nameEl.textContent = names[gesture] || 'Unknown';
+            if (detailEl) {
+                detailEl.textContent = (gesture === 'none' || gesture === 'unknown')
+                    ? 'Show your hand to the camera. Mapped gestures control slides and narration.'
+                    : 'Gesture recognized. Mapped actions are ready.';
+            }
             if (confEl) confEl.style.width = `${confidence * 100}%`;
             if (fpsEl) fpsEl.textContent = Math.round(this.metrics.fps);
             if (latencyEl) {
@@ -755,12 +761,15 @@ class GestureEngine {
      */
     async logGestureToBackend(gesture) {
         try {
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.getCSRFToken(),
+            };
+            const gls = typeof window !== 'undefined' && window.__ZENTROL_GESTURE_LOG_SECRET__;
+            if (gls) headers['X-Zentrol-Gesture-Log-Secret'] = gls;
             const response = await fetch('/api/log-gesture/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCSRFToken()
-                },
+                headers,
                 body: JSON.stringify({
                     gesture_type: gesture,
                     confidence: this.gestureConfidence,

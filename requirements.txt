@@ -25,6 +25,9 @@ tzdata==2025.2
 # REST API framework
 djangorestframework==3.14.0
 
+# OpenAPI 3 schema generation for DRF (Swagger UI at /api/docs/)
+drf-spectacular==0.27.2
+
 # CORS support for cross-origin requests
 django-cors-headers==4.3.1
 
@@ -58,6 +61,7 @@ websockets==12.0
 # ============================================================================
 # Image processing
 Pillow==10.3.0
+PyMuPDF==1.26.5
 
 # Data analysis (optional - currently not directly used in code)
 numpy==1.26.4

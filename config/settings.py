@@ -19,7 +19,8 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-key-change-in-produc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1','*'])
+# Never use '*' in production — set explicit hosts / domains.
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 # Application definition
 INSTALLED_APPS = [
@@ -32,6 +33,7 @@ INSTALLED_APPS = [
     
     # Third party
     'rest_framework',
+    'drf_spectacular',
     'corsheaders',
     
     # Local apps
@@ -147,7 +149,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS Settings (for ngrok/local development)
+# Auth redirects
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'home'
+
+# Allow larger JSON payloads for preprocessed slide uploads from dashboard.
+# PPTX parsing generates data URLs per slide; defaults are too small and can 400.
+DATA_UPLOAD_MAX_MEMORY_SIZE = env.int('DATA_UPLOAD_MAX_MEMORY_SIZE', default=50 * 1024 * 1024)  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = env.int('FILE_UPLOAD_MAX_MEMORY_SIZE', default=50 * 1024 * 1024)  # 50 MB
+
+# Browser clients allowed to call the API (same-origin Django pages + any extra dev origins).
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:8000',
     'http://127.0.0.1:8000',
@@ -155,8 +167,10 @@ CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
 
 CORS_ALLOW_CREDENTIALS = True
 
-# CSRF settings for ngrok
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+])
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -169,9 +183,36 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
-        'user': '1000/hour'
-    }
+        'user': '1000/hour',
+        'gesture_log': '300/hour',
+    },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+# OpenAPI / Swagger (drf-spectacular)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Zentrol API',
+    'DESCRIPTION': 'Gesture-controlled presentation system — REST API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+# Expose /api/schema/ and /api/docs/ outside DEBUG (default False — use staff + Django admin or env).
+SPECTACULAR_PUBLIC = env.bool('SPECTACULAR_PUBLIC', default=False)
+
+# Optional shared secret for POST /api/log-gesture/ (optional header X-Zentrol-Gesture-Log-Secret).
+# If set, requests without matching X-Zentrol-Gesture-Log-Secret header get 403.
+GESTURE_LOG_SHARED_SECRET = env('GESTURE_LOG_SHARED_SECRET', default='').strip()
+
+# Email (password reset / auth notifications)
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='localhost')
+EMAIL_PORT = env.int('EMAIL_PORT', default=25)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='no-reply@zentrol.local')
 
 # Production Security Settings
 # =============================
