@@ -191,26 +191,40 @@
     background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
 }
 
-/* Reveal.js fullscreen adjustments */
+/*
+ * Fake fullscreen: slide column is NOT full viewport width (Control Hub + padding).
+ * Use 100% of the slide stack — never 100vw — or images scale to viewport and get clipped.
+ */
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal {
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
     margin-left: 0 !important;
 }
 
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides {
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
 }
 
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides section {
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
 }
 
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides section img {
-    max-width: calc(100vw - 40px) !important;
-    max-height: calc(100vh - 40px) !important;
+    max-width: calc(100% - 24px) !important;
+    max-height: calc(100% - 24px) !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    margin: 12px !important;
 }
 
 /* Reset Reveal.js when NOT in fullscreen - prevent overflow */

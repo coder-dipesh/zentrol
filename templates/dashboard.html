@@ -1,0 +1,635 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zentrol Workspace</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            zentrol: {
+              navy: {
+                50:'#E6EBF0',100:'#C0CAD8',200:'#99A9C0',300:'#7288A8',400:'#4B6790',
+                500:'#0F1E2E',600:'#0D1A28',700:'#0B1622',800:'#09121C',900:'#070E16'
+              },
+              teal: {
+                50:'#E6FAF8',100:'#C1F0EB',200:'#9CE6DE',300:'#77DCD1',400:'#52D2C4',
+                500:'#1FB6AA',600:'#1AA096',700:'#168A82',800:'#11746E',900:'#0D5E5A'
+              },
+              gray: {
+                50:'#F9FAFB',100:'#F4F6F8',200:'#E5E7EB',300:'#D1D5DB',400:'#9CA3AF',
+                500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2933',900:'#111827'
+              }
+            }
+          },
+          boxShadow: {
+            card: '0 8px 26px rgba(15, 30, 46, 0.08)'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    #upload-progress-bar { transition: width 0.28s ease; }
+    .fav-on { color: #f59e0b; fill: rgba(245, 158, 11, 0.18); stroke: #d97706; }
+  </style>
+</head>
+<body class="min-h-screen bg-zentrol-gray-100 text-zentrol-navy-500">
+  <aside class="fixed inset-y-0 left-0 z-40 w-20 border-r border-zentrol-gray-200 bg-white">
+    <div class="flex h-full flex-col items-center py-4">
+      <a href="/" class="mb-5 grid h-10 w-10 place-items-center rounded-xl bg-zentrol-teal-500/10" title="Zentrol">
+        <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-6 w-6" />
+      </a>
+      <nav class="mt-2 flex flex-1 flex-col items-center gap-2 text-[11px] text-zentrol-gray-600">
+        <span class="flex w-14 flex-col items-center gap-1 rounded-xl bg-zentrol-teal-50 py-2 font-medium text-zentrol-teal-700">
+          <span>⌂</span><span>Home</span>
+        </span>
+        <span class="flex w-14 flex-col items-center gap-1 rounded-xl py-2"><span>▦</span><span>Templates</span></span>
+        <span class="flex w-14 flex-col items-center gap-1 rounded-xl py-2"><span>◷</span><span>Library</span></span>
+        <span class="flex w-14 flex-col items-center gap-1 rounded-xl py-2"><span>⚙</span><span>Settings</span></span>
+      </nav>
+      <div class="grid h-9 w-9 place-items-center rounded-full bg-zentrol-navy-500 text-xs font-semibold text-white">ZW</div>
+    </div>
+  </aside>
+
+  <main class="ml-20 min-h-screen p-5 md:p-7">
+    <header class="border-b border-zentrol-gray-200 pb-4">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-6 w-6 rounded" />
+          <span class="text-xl font-semibold">Zentrol Workspace</span>
+        </div>
+        <div class="flex items-center gap-4 text-sm text-zentrol-gray-600">
+          <button id="search-btn" type="button" title="Search command icon + k" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-zentrol-navy-500 transition hover:bg-zentrol-navy-50 hover:text-zentrol-navy-600 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-100" aria-label="Search">
+            <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="magnifying-glass" class="h-4 w-4" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M368 208A160 160 0 1 0 48 208a160 160 0 1 0 320 0zM337.1 371.1C301.7 399.2 256.8 416 208 416C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208c0 48.8-16.8 93.7-44.9 129.1L505 471c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L337.1 371.1z"></path></svg>
+          </button>
+          <span class="font-medium">{{ request.user.username }}</span>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="rounded-full border border-zentrol-gray-200 bg-white px-3 py-1.5 hover:bg-zentrol-gray-50">Logout</button>
+          </form>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <button id="upload-btn" class="rounded-full bg-zentrol-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zentrol-navy-600">+ Upload presentation</button>
+      </div>
+    </header>
+
+    <section class="mt-5">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="inline-flex flex-wrap items-center gap-2 rounded-full bg-zentrol-gray-100 p-1 text-sm">
+          <a href="?filter=all&view={{ view_mode }}" class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 {% if active_filter == 'all' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
+            <span>⌂</span><span>All</span>
+          </a>
+          <a href="?filter=recent&view={{ view_mode }}" class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 {% if active_filter == 'recent' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
+            <span>◷</span><span>Recently viewed</span>
+          </a>
+          <a href="?filter=created&view={{ view_mode }}" class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 {% if active_filter == 'created' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
+            <span>◉</span><span>Created by you</span>
+          </a>
+          <a href="?filter=favorites&view={{ view_mode }}" class="inline-flex items-center gap-1 rounded-full px-3 py-1.5 {% if active_filter == 'favorites' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
+            <span>☆</span><span>Favorites</span>
+          </a>
+        </div>
+        <div class="inline-flex items-center gap-2 rounded-full bg-zentrol-gray-100 p-1 text-sm">
+          <a href="?filter={{ active_filter }}&view=grid" class="rounded-full px-3 py-1.5 {% if view_mode == 'grid' %}bg-zentrol-navy-500 text-white{% else %}text-zentrol-gray-600{% endif %}">▦ Grid</a>
+          <a href="?filter={{ active_filter }}&view=list" class="rounded-full px-3 py-1.5 {% if view_mode == 'list' %}bg-zentrol-navy-500 text-white{% else %}text-zentrol-gray-600{% endif %}">≡ List</a>
+        </div>
+      </div>
+
+      {% if assets %}
+        {% if view_mode == 'grid' %}
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {% for asset in assets %}
+          <article
+            class="group relative cursor-pointer overflow-visible rounded-2xl border border-zentrol-gray-200 bg-white shadow-card transition hover:-translate-y-0.5 hover:shadow-lg"
+            data-card-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
+            tabindex="0"
+            role="link"
+            aria-label="Open {{ asset.title }}"
+          >
+            {% with first=asset.slides_json.0 %}
+              {% if first.imageUrl %}
+                <img src="{{ first.imageUrl }}" alt="{{ asset.title }}" class="h-44 w-full rounded-t-2xl object-cover" />
+              {% else %}
+                <div class="grid h-44 place-items-center rounded-t-2xl bg-gradient-to-br from-zentrol-navy-50 to-zentrol-teal-50 text-slate-500">No preview</div>
+              {% endif %}
+            {% endwith %}
+            <div class="border-t border-zentrol-gray-200 p-4">
+              <div class="flex items-start justify-between gap-2">
+                <h2 class="text-[20px] font-medium leading-tight text-zentrol-gray-800">{{ asset.title }}</h2>
+              </div>
+              <div class="mt-10 flex items-center justify-between">
+                <p class="text-[14px] text-zentrol-gray-400">{{ asset.slide_count }} slides</p>
+                <div class="relative">
+                  <button
+                    type="button"
+                    data-card-menu-btn
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-zentrol-gray-400 hover:bg-zentrol-gray-100 hover:text-zentrol-gray-600"
+                    aria-label="More options"
+                  >
+                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+                      <circle cx="5" cy="12" r="1.9"></circle>
+                      <circle cx="12" cy="12" r="1.9"></circle>
+                      <circle cx="19" cy="12" r="1.9"></circle>
+                    </svg>
+                  </button>
+                  <div data-card-menu class="absolute right-0 bottom-8 z-30 hidden min-w-44 overflow-hidden rounded-xl border border-zentrol-gray-200 bg-white py-1 shadow-xl">
+                    <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="block px-3 py-2 text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50">Open</a>
+                    <button type="button" class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-400 hover:bg-zentrol-gray-50" disabled>Share...</button>
+                    <button type="button" class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-400 hover:bg-zentrol-gray-50" disabled>Rename...</button>
+                    <button type="button" class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-400 hover:bg-zentrol-gray-50" disabled>Duplicate</button>
+                    <button
+                      type="button"
+                      data-fav-btn
+                      data-asset-id="{{ asset.id }}"
+                      data-favorite-url="{% url 'toggle_favorite' asset.id %}"
+                      data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
+                      class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50"
+                    >
+                      {% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}
+                    </button>
+                    <button
+                      type="button"
+                      data-copy-link-btn
+                      data-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
+                      class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50"
+                    >
+                      Copy link
+                    </button>
+                    <button
+                      type="button"
+                      data-delete-btn
+                      data-delete-url="{% url 'delete_presentation' asset.id %}"
+                      data-asset-title="{{ asset.title|escape }}"
+                      class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                    >
+                      Send to trash
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="overflow-visible bg-transparent">
+          <div class="grid grid-cols-[44px_minmax(0,1fr)_180px_220px_36px] items-center border-b border-zentrol-gray-200 px-4 py-2 text-xs font-semibold tracking-wide text-zentrol-gray-500">
+            <span></span>
+            <span>Title</span>
+            <span class="inline-flex items-center gap-1">Last viewed
+              <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M6 8l4 4 4-4"></path>
+              </svg>
+            </span>
+            <span>Creator</span>
+            <span></span>
+          </div>
+          {% for asset in assets %}
+            <div
+              class="grid cursor-pointer grid-cols-[44px_minmax(0,1fr)_180px_220px_36px] items-center border-b border-zentrol-gray-100 px-4 py-2.5 transition hover:bg-zentrol-gray-50"
+              data-card-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
+              tabindex="0"
+              role="link"
+              aria-label="Open {{ asset.title }}"
+            >
+              <div class="inline-flex items-center justify-center text-zentrol-gray-300">
+                <button
+                  type="button"
+                  data-fav-btn
+                  data-asset-id="{{ asset.id }}"
+                  data-favorite-url="{% url 'toggle_favorite' asset.id %}"
+                  data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
+                  class="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-zentrol-gray-100"
+                  title="{% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}"
+                  aria-label="Toggle favorite"
+                >
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 {% if asset.is_favorite %}fav-on{% endif %}" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M12 3.6l2.58 5.22 5.76.84-4.17 4.06.98 5.73L12 16.74 6.85 19.45l.98-5.73-4.17-4.06 5.76-.84L12 3.6z"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-zentrol-gray-800">{{ asset.title }}</p>
+              </div>
+
+              <p class="text-sm text-zentrol-gray-600">{{ asset.updated_at|timesince }} ago</p>
+
+              <div class="flex min-w-0 items-center gap-2">
+                <span class="grid h-6 w-6 place-items-center rounded-full bg-orange-100 text-[10px] font-semibold text-orange-700">
+                  {{ request.user.username|slice:":1"|upper }}
+                </span>
+                <span class="truncate text-sm text-zentrol-gray-700">{{ request.user.username|upper }}</span>
+              </div>
+
+              <div class="relative">
+                <button
+                  type="button"
+                  data-card-menu-btn
+                  class="inline-flex h-7 w-7 items-center justify-center rounded-full text-zentrol-gray-400 hover:bg-zentrol-gray-100 hover:text-zentrol-gray-600"
+                  aria-label="More options"
+                >
+                  <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1.9"></circle>
+                    <circle cx="12" cy="12" r="1.9"></circle>
+                    <circle cx="19" cy="12" r="1.9"></circle>
+                  </svg>
+                </button>
+                <div data-card-menu class="absolute right-0 bottom-8 z-20 hidden min-w-44 overflow-hidden rounded-xl border border-zentrol-gray-200 bg-white py-1 shadow-xl">
+                  <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="block px-3 py-2 text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50">Open</a>
+                  <button
+                    type="button"
+                    data-fav-btn
+                    data-asset-id="{{ asset.id }}"
+                    data-favorite-url="{% url 'toggle_favorite' asset.id %}"
+                    data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
+                    class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50"
+                  >
+                    {% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}
+                  </button>
+                  <button
+                    type="button"
+                    data-delete-btn
+                    data-delete-url="{% url 'delete_presentation' asset.id %}"
+                    data-asset-title="{{ asset.title|escape }}"
+                    class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Send to trash
+                  </button>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="rounded-2xl border border-dashed border-zentrol-gray-300 bg-white px-6 py-10 text-center text-sm text-zentrol-gray-500">
+          No presentations yet. Click <span class="font-medium">Upload presentation</span> to add one.
+        </div>
+      {% endif %}
+    </section>
+
+    <section id="upload-status" class="mt-6 hidden rounded-2xl border border-zentrol-gray-200 bg-white p-4 shadow-card">
+      <div class="flex items-center justify-between text-sm">
+        <span id="upload-progress-label" class="font-medium">Processing…</span>
+        <span id="upload-progress-pct" class="font-mono text-zentrol-teal-600">0%</span>
+      </div>
+      <div class="mt-2 h-2 overflow-hidden rounded-full bg-zentrol-gray-200">
+        <div id="upload-progress-bar" class="h-full w-0 rounded-full bg-zentrol-teal-500"></div>
+      </div>
+      <p id="upload-error-text" class="mt-2 hidden text-sm text-red-600"></p>
+    </section>
+  </main>
+
+  <div id="search-modal" class="fixed inset-0 z-50 hidden">
+    <button id="search-backdrop" type="button" class="absolute inset-0 bg-zentrol-navy-900/45" aria-label="Close search"></button>
+    <div class="relative mx-auto mt-14 w-[min(92vw,760px)] overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white shadow-2xl">
+      <div class="border-b border-zentrol-gray-200 px-5 py-4">
+        <label for="search-input" class="sr-only">Jump to</label>
+        <div class="flex items-center gap-3 text-zentrol-gray-400">
+          <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="magnifying-glass" class="h-4 w-4" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M368 208A160 160 0 1 0 48 208a160 160 0 1 0 320 0zM337.1 371.1C301.7 399.2 256.8 416 208 416C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208c0 48.8-16.8 93.7-44.9 129.1L505 471c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L337.1 371.1z"></path></svg>
+          <input id="search-input" type="text" placeholder="Jump to" class="w-full border-0 bg-transparent p-0 text-sm text-zentrol-navy-500 placeholder:text-zentrol-gray-400 focus:outline-none">
+        </div>
+      </div>
+      <div class="max-h-[52vh] overflow-y-auto px-5 py-4">
+        <div class="space-y-3">
+          {% for asset in assets|slice:":6" %}
+            <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-zentrol-gray-50">
+              {% with first=asset.slides_json.0 %}
+                {% if first.imageUrl %}
+                  <img src="{{ first.imageUrl }}" alt="" class="h-12 w-24 rounded-md object-cover">
+                {% else %}
+                  <div class="grid h-12 w-24 place-items-center rounded-md bg-zentrol-gray-100 text-xs text-zentrol-gray-500">No preview</div>
+                {% endif %}
+              {% endwith %}
+              <div>
+                <p class="text-sm font-medium text-zentrol-navy-500">{{ asset.title }}</p>
+                <p class="text-xs text-zentrol-gray-500">{{ asset.slide_count }} slides</p>
+                <p class="mt-1 text-xs text-zentrol-gray-400">Edited {{ asset.updated_at|date:"M j, H:i" }}</p>
+              </div>
+            </a>
+          {% empty %}
+            <p class="px-2 py-1 text-sm text-zentrol-gray-500">No saved presentations yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="flex items-center justify-between border-t border-zentrol-gray-200 px-5 py-3 text-xs text-zentrol-gray-500">
+        <p>Tip: Press <span class="rounded border border-zentrol-gray-300 bg-zentrol-gray-50 px-1.5 py-0.5">⌘K</span> to open search.</p>
+        <button id="search-close" type="button" class="rounded-md px-2 py-1 hover:bg-zentrol-gray-100">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-modal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+    <button id="delete-backdrop" type="button" class="absolute inset-0 bg-zentrol-navy-900/45" aria-label="Close delete dialog"></button>
+    <div class="relative mx-auto mt-24 w-[min(92vw,460px)] overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white shadow-2xl">
+      <div class="border-b border-zentrol-gray-200 px-5 py-4">
+        <h3 class="text-base font-semibold text-zentrol-navy-500">Delete presentation?</h3>
+      </div>
+      <div class="px-5 py-4">
+        <p id="delete-message" class="text-sm text-zentrol-gray-600">This action cannot be undone.</p>
+      </div>
+      <div class="flex items-center justify-end gap-2 border-t border-zentrol-gray-200 px-5 py-3">
+        <button id="delete-cancel" type="button" class="rounded-lg border border-zentrol-gray-200 px-3 py-1.5 text-sm hover:bg-zentrol-gray-50">Cancel</button>
+        <button id="delete-confirm" type="button" class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <input id="file-input" type="file" accept=".pptx,.ppt" class="hidden" />
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const createNewBtn = document.getElementById('create-new-btn');
+    const statusWrap = document.getElementById('upload-status');
+    const labelEl = document.getElementById('upload-progress-label');
+    const pctEl = document.getElementById('upload-progress-pct');
+    const barEl = document.getElementById('upload-progress-bar');
+    const errorEl = document.getElementById('upload-error-text');
+    const searchBtn = document.getElementById('search-btn');
+    const searchModal = document.getElementById('search-modal');
+    const searchInput = document.getElementById('search-input');
+    const searchBackdrop = document.getElementById('search-backdrop');
+    const searchClose = document.getElementById('search-close');
+    const deleteModal = document.getElementById('delete-modal');
+    const deleteBackdrop = document.getElementById('delete-backdrop');
+    const deleteCancel = document.getElementById('delete-cancel');
+    const deleteConfirm = document.getElementById('delete-confirm');
+    const deleteMessage = document.getElementById('delete-message');
+    const activeFilter = "{{ active_filter|default:'all' }}";
+    let pendingDeleteUrl = '';
+
+    function getCSRFToken() {
+      const name = 'csrftoken=';
+      const parts = document.cookie.split(';').map((c) => c.trim());
+      for (const c of parts) {
+        if (c.startsWith(name)) return decodeURIComponent(c.slice(name.length));
+      }
+      return '';
+    }
+
+    function openFilePicker() {
+      fileInput.click();
+    }
+
+    if (uploadBtn) uploadBtn.addEventListener('click', openFilePicker);
+    if (createNewBtn) createNewBtn.addEventListener('click', openFilePicker);
+    document.querySelectorAll('[data-upload-again]').forEach((btn) => btn.addEventListener('click', openFilePicker));
+
+    function openSearch() {
+      if (!searchModal) return;
+      searchModal.classList.remove('hidden');
+      setTimeout(() => searchInput && searchInput.focus(), 0);
+    }
+
+    function closeSearch() {
+      if (!searchModal) return;
+      searchModal.classList.add('hidden');
+    }
+
+    function openDeleteModal(url, title) {
+      pendingDeleteUrl = url || '';
+      if (deleteMessage) {
+        const safeTitle = title ? ` "${title}"` : '';
+        deleteMessage.textContent = `Are you sure you want to delete${safeTitle}? This action cannot be undone.`;
+      }
+      if (deleteModal) {
+        deleteModal.classList.remove('hidden');
+        deleteModal.setAttribute('aria-hidden', 'false');
+      }
+    }
+
+    function closeDeleteModal() {
+      pendingDeleteUrl = '';
+      if (deleteModal) {
+        deleteModal.classList.add('hidden');
+        deleteModal.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    if (searchBtn) searchBtn.addEventListener('click', openSearch);
+    if (searchBackdrop) searchBackdrop.addEventListener('click', closeSearch);
+    if (searchClose) searchClose.addEventListener('click', closeSearch);
+    if (deleteBackdrop) deleteBackdrop.addEventListener('click', closeDeleteModal);
+    if (deleteCancel) deleteCancel.addEventListener('click', closeDeleteModal);
+
+    document.querySelectorAll('[data-delete-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        openDeleteModal(btn.dataset.deleteUrl || '', btn.dataset.assetTitle || '');
+      });
+    });
+
+    document.querySelectorAll('[data-card-open-url]').forEach((card) => {
+      const open = () => {
+        const url = card.dataset.cardOpenUrl;
+        if (url) window.location.href = url;
+      };
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('[data-card-menu-btn]') || e.target.closest('[data-card-menu]') || e.target.closest('[data-fav-btn]')) return;
+        open();
+      });
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      });
+    });
+
+    function closeAllCardMenus() {
+      document.querySelectorAll('[data-card-menu]').forEach((menu) => menu.classList.add('hidden'));
+    }
+
+    document.querySelectorAll('[data-card-menu-btn]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = btn.parentElement && btn.parentElement.querySelector('[data-card-menu]');
+        if (!menu) return;
+        const opening = menu.classList.contains('hidden');
+        closeAllCardMenus();
+        if (opening) menu.classList.remove('hidden');
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-card-menu]') && !e.target.closest('[data-card-menu-btn]')) {
+        closeAllCardMenus();
+      }
+    });
+
+    document.querySelectorAll('[data-copy-link-btn]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const relUrl = btn.dataset.openUrl || '';
+        const fullUrl = `${window.location.origin}${relUrl}`;
+        try {
+          await navigator.clipboard.writeText(fullUrl);
+          statusWrap.classList.remove('hidden');
+          errorEl.classList.add('hidden');
+          labelEl.textContent = 'Link copied';
+          pctEl.textContent = '';
+          barEl.style.width = '0%';
+        } catch (_) {
+          statusWrap.classList.remove('hidden');
+          labelEl.textContent = 'Copy failed';
+          errorEl.textContent = '⚠️ Could not copy link.';
+          errorEl.classList.remove('hidden');
+        }
+        closeAllCardMenus();
+      });
+    });
+
+    async function toggleFavorite(btn) {
+      const url = btn.dataset.favoriteUrl || '';
+      const assetId = btn.dataset.assetId || '';
+      if (!url) return;
+      btn.disabled = true;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCSRFToken()
+          }
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          throw new Error(result.error || 'Failed to update favorite');
+        }
+        const isFav = !!result.is_favorite;
+        document.querySelectorAll(`[data-fav-btn][data-asset-id="${assetId}"]`).forEach((el) => {
+          el.dataset.isFavorite = isFav ? '1' : '0';
+          el.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+          const svg = el.querySelector('svg');
+          if (svg) {
+            svg.classList.toggle('fav-on', isFav);
+          } else {
+            el.textContent = isFav ? 'Remove from favorites' : 'Add to favorites';
+          }
+        });
+
+        if (activeFilter === 'favorites' && !isFav) {
+          window.location.reload();
+        }
+      } catch (err) {
+        statusWrap.classList.remove('hidden');
+        labelEl.textContent = 'Favorite update failed';
+        errorEl.textContent = `⚠️ ${err.message}`;
+        errorEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.querySelectorAll('[data-fav-btn]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        await toggleFavorite(btn);
+      });
+    });
+
+    if (deleteConfirm) {
+      deleteConfirm.addEventListener('click', async () => {
+        if (!pendingDeleteUrl) return;
+        deleteConfirm.disabled = true;
+        const originalText = deleteConfirm.textContent;
+        deleteConfirm.textContent = 'Deleting...';
+        try {
+          const response = await fetch(pendingDeleteUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCSRFToken()
+            }
+          });
+          const result = await response.json();
+          if (!response.ok || !result.ok) {
+            throw new Error(result.error || 'Failed to delete presentation');
+          }
+          window.location.reload();
+        } catch (err) {
+          if (errorEl) {
+            statusWrap.classList.remove('hidden');
+            labelEl.textContent = 'Delete failed';
+            errorEl.textContent = `⚠️ ${err.message}`;
+            errorEl.classList.remove('hidden');
+          }
+          closeDeleteModal();
+        } finally {
+          deleteConfirm.disabled = false;
+          deleteConfirm.textContent = originalText;
+        }
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (searchModal && searchModal.classList.contains('hidden')) openSearch();
+        else closeSearch();
+      }
+      if (e.key === 'Escape' && searchModal && !searchModal.classList.contains('hidden')) {
+        closeSearch();
+      }
+      if (e.key === 'Escape' && deleteModal && !deleteModal.classList.contains('hidden')) {
+        closeDeleteModal();
+      }
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      statusWrap.classList.remove('hidden');
+      errorEl.classList.add('hidden');
+      labelEl.textContent = 'Starting…';
+      pctEl.textContent = '0%';
+      barEl.style.width = '0%';
+
+      try {
+        labelEl.textContent = 'Uploading presentation…';
+        pctEl.textContent = '35%';
+        barEl.style.width = '35%';
+
+        const formData = new FormData();
+        formData.append('presentation', file);
+
+        const response = await fetch("{% url 'upload_presentation' %}", {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCSRFToken()
+          },
+          body: formData
+        });
+
+        labelEl.textContent = 'Rendering slides server-side…';
+        pctEl.textContent = '90%';
+        barEl.style.width = '90%';
+
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          throw new Error(result.error || 'Failed to save presentation');
+        }
+        labelEl.textContent = 'Completed';
+        pctEl.textContent = '100%';
+        barEl.style.width = '100%';
+        window.location.href = "{% url 'dashboard' %}";
+      } catch (err) {
+        labelEl.textContent = 'Upload failed';
+        errorEl.textContent = `⚠️ ${err.message}`;
+        errorEl.classList.remove('hidden');
+      } finally {
+        fileInput.value = '';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -68,7 +68,8 @@ class FullscreenAPI {
         if (!this.container) return;
         
         this.fakeFullscreenActive = true;
-        document.body.classList.add('overflow-hidden');
+        document.body.classList.add('overflow-hidden', 'fake-fullscreen-active');
+        this.container.classList.add('fake-fullscreen');
 
         // Tailwind utility classes for fullscreen layout instead of custom CSS
         this.container.classList.add(
@@ -84,11 +85,8 @@ class FullscreenAPI {
             'pl-0'
         );
 
-        // Make Reveal container use full viewport
-        const revealEl = this.container.querySelector('.reveal');
-        if (revealEl) {
-            revealEl.classList.add('w-screen', 'h-screen');
-        }
+        // Do NOT set .reveal to w-screen — slide column is narrower than 100vw (Control Hub + padding).
+        // Forcing 100vw clips slide images; parent flex chain supplies correct width/height.
 
         // Hide header and mobile controls while in fullscreen
         const elementsToHide = [
@@ -111,7 +109,8 @@ class FullscreenAPI {
         if (!this.container) return;
         
         this.fakeFullscreenActive = false;
-        document.body.classList.remove('overflow-hidden');
+        document.body.classList.remove('overflow-hidden', 'fake-fullscreen-active');
+        this.container.classList.remove('fake-fullscreen');
 
         // Remove fullscreen layout classes
         this.container.classList.remove(
@@ -127,7 +126,7 @@ class FullscreenAPI {
             'pl-0'
         );
 
-        // Reset Reveal container height/width back to default
+        // Reset Reveal container height/width back to default (header visible again)
         const revealEl = this.container.querySelector('.reveal');
         if (revealEl) {
             revealEl.classList.remove('w-screen', 'h-screen');
@@ -150,13 +149,7 @@ class FullscreenAPI {
         // Trigger custom event for listeners
         window.dispatchEvent(new CustomEvent('fakefullscreenchange', { detail: { isFullscreen: false } }));
         
-        // Recalculate Reveal.js layout after exiting fullscreen
-        if (typeof Reveal !== 'undefined') {
-            setTimeout(() => {
-                Reveal.layout();
-                Reveal.sync();
-            }, 100);
-        }
+        scheduleRevealLayoutDebounced(100);
     }
 
     toggleFakeFullscreen() {
@@ -209,20 +202,36 @@ class FullscreenAPI {
         }
     }
 
+    /**
+     * Single handler — do not register fullscreenchange + webkit + moz + ms together:
+     * many browsers emit multiple events for one transition, causing repeated Reveal.layout()
+     * and main-thread stalls ("page not responding").
+     */
     onFullscreenChange(callback) {
-        const events = [
-            'fullscreenchange',
-            'webkitfullscreenchange',
-            'mozfullscreenchange',
-            'MSFullscreenChange'
-        ];
-
-        events.forEach(event => {
-            document.addEventListener(event, () => {
-                callback(this.isFullscreen());
-            });
-        });
+        const handler = () => callback(this.isFullscreen());
+        document.addEventListener('fullscreenchange', handler);
+        document.addEventListener('webkitfullscreenchange', handler);
     }
+}
+
+/** Debounced Reveal layout after fullscreen / resize storms (prevents UI freeze). */
+let __zentrolRevealFsLayoutTimer = null;
+function scheduleRevealLayoutDebounced(delayMs = 120) {
+    if (__zentrolRevealFsLayoutTimer) {
+        clearTimeout(__zentrolRevealFsLayoutTimer);
+    }
+    __zentrolRevealFsLayoutTimer = setTimeout(() => {
+        __zentrolRevealFsLayoutTimer = null;
+        if (typeof Reveal === 'undefined') return;
+        try {
+            Reveal.layout();
+            if (typeof Reveal.sync === 'function') {
+                Reveal.sync();
+            }
+        } catch (e) {
+            console.warn('[Zentrol] Reveal layout failed:', e);
+        }
+    }, delayMs);
 }
 
 // ============================================================================
@@ -493,17 +502,11 @@ class PresentationController {
     }
 
     setupFullscreenMonitoring() {
-        // Monitor real fullscreen API changes
+        // Monitor real fullscreen API changes (debounced layout — avoids freeze)
         this.fullscreen.onFullscreenChange((isFullscreen) => {
             this.updateFullscreenUI(isFullscreen);
             this.updateGestureGuide(isFullscreen);
-            // Recalculate Reveal.js layout after fullscreen change
-            if (typeof Reveal !== 'undefined') {
-                setTimeout(() => {
-                    Reveal.layout();
-                    Reveal.sync();
-                }, 100);
-            }
+            scheduleRevealLayoutDebounced(120);
         });
 
         // Monitor fake fullscreen changes (for gesture-based fullscreen)
@@ -511,13 +514,7 @@ class PresentationController {
             const isFullscreen = event.detail.isFullscreen;
             this.updateFullscreenUI(isFullscreen);
             this.updateGestureGuide(isFullscreen);
-            // Recalculate Reveal.js layout after fullscreen change
-            if (typeof Reveal !== 'undefined') {
-                setTimeout(() => {
-                    Reveal.layout();
-                    Reveal.sync();
-                }, 100);
-            }
+            scheduleRevealLayoutDebounced(120);
         });
     }
 
@@ -713,6 +710,9 @@ class PresentationController {
         } catch (error) {
             console.error('Fullscreen error:', error);
             alert('Fullscreen is not supported in your browser.');
+        } finally {
+            // Ensure Reveal catches up even if fullscreenchange is delayed or coalesced oddly.
+            scheduleRevealLayoutDebounced(180);
         }
     }
 

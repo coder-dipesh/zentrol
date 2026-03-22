@@ -424,7 +424,7 @@
                         <h3 class="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Actions</h3>
                         <span class="text-[10px] text-white/40">Primary flow</span>
                     </div>
-                    <a id="change-file-btn" href="/#upload" style="display:none"
+                    <a id="change-file-btn" href="{% url 'dashboard' %}" style="display:none"
                        class="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/10">
                         <span>📁</span><span>Change file</span>
                     </a>
@@ -643,6 +643,7 @@
     <script src="{% static 'js/gesture_engine.js' %}"></script>
     <script src="{% static 'js/narration.js' %}"></script>
     <script src="{% static 'js/presentation.js' %}"></script>
+    {{ initial_slides|json_script:"initial-slides-json" }}
 
     <!-- Main Application Script -->
     <script>
@@ -799,10 +800,15 @@
             // Default: filmstrip closed on desktop — stage uses full shell width (reference layout).
             setFilmstripOpen(false);
 
+            let resizeDebounce = null;
             window.addEventListener('resize', () => {
-                const open = toggleBtn ? toggleBtn.classList.contains('md:hidden') : true;
-                setFilmstripOpen(open);
-            });
+                if (resizeDebounce) clearTimeout(resizeDebounce);
+                resizeDebounce = setTimeout(() => {
+                    resizeDebounce = null;
+                    const open = toggleBtn ? toggleBtn.classList.contains('md:hidden') : true;
+                    setFilmstripOpen(open);
+                }, 200);
+            }, { passive: true });
 
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', (e) => {
@@ -825,9 +831,16 @@
         // Falls back to static slides gracefully
         // ================================================================
         let uploadedSlides = [];
+        const serverSlides = JSON.parse(document.getElementById('initial-slides-json')?.textContent || '[]');
 
         function loadUploadedSlides() {
             try {
+                if (Array.isArray(serverSlides) && serverSlides.length > 0) {
+                    uploadedSlides = serverSlides;
+                    sessionStorage.setItem('zentrol_slides', JSON.stringify(uploadedSlides));
+                    console.log(`📂 Loaded ${uploadedSlides.length} saved slides from server`);
+                    return true;
+                }
                 const raw = sessionStorage.getItem('zentrol_slides');
                 if (!raw) return false;
                 uploadedSlides = JSON.parse(raw);
@@ -890,6 +903,53 @@
             }, 100);
         }
 
+        function renderDynamicFilmstrip(slides) {
+            const filmstripBody = document.querySelector('#slide-filmstrip .flex-1.overflow-y-auto');
+            if (!filmstripBody || !Array.isArray(slides) || slides.length === 0) return;
+
+            const thumbsHtml = slides.map((slide, i) => {
+                const idx = i + 1;
+                const imageUrl = slide && slide.imageUrl ? String(slide.imageUrl) : '';
+                const safeAltRaw = slide && slide.text ? String(slide.text).slice(0, 80) : `Slide ${idx}`;
+                const safeAlt = safeAltRaw.replace(/"/g, '&quot;');
+                if (imageUrl) {
+                    return `
+                        <button type="button" class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150" data-slide-index="${i}">
+                            <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                                <img src="${imageUrl}" alt="${safeAlt}" class="w-full h-14 object-cover" />
+                                <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">${idx}</span>
+                            </div>
+                        </button>
+                    `;
+                }
+                return `
+                    <button type="button" class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150" data-slide-index="${i}">
+                        <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                            <div class="grid h-14 w-full place-items-center bg-zentrol-gray-100 text-[11px] text-zentrol-gray-500">No preview</div>
+                            <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">${idx}</span>
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            filmstripBody.innerHTML = thumbsHtml;
+        }
+
+        function bindFilmstripNavigation() {
+            const filmstrip = document.getElementById('slide-filmstrip');
+            if (!filmstrip || filmstrip.dataset.navBound === '1') return;
+            filmstrip.dataset.navBound = '1';
+
+            filmstrip.addEventListener('click', (event) => {
+                const thumb = event.target.closest('.slide-thumb[data-slide-index]');
+                if (!thumb) return;
+                const idx = Number.parseInt(thumb.dataset.slideIndex || '', 10);
+                if (!Number.isNaN(idx) && typeof Reveal !== 'undefined') {
+                    Reveal.slide(idx);
+                }
+            });
+        }
+
         // Inject uploaded slides as narration scripts into NarrationManager
         function patchNarrationScripts(slides) {
             slides.forEach((slide, i) => {
@@ -941,17 +1001,24 @@
 
         // After Reveal is ready: inject slides + patch narration
         Reveal.addEventListener('ready', () => {
+            bindFilmstripNavigation();
             const hasUploaded = loadUploadedSlides();
 
             if (hasUploaded) {
+                window.__zentrolExternalSlideDeck = true;
+                window.__zentrolSlideCount = uploadedSlides.length;
                 injectUploadedSlides(uploadedSlides);
+                renderDynamicFilmstrip(uploadedSlides);
                 patchNarrationScripts(uploadedSlides);
                 updateChangeFileBtn(true);
+                if (window.presentationController) {
+                    window.presentationController.updateSlideCount();
+                    window.presentationController.updateSlideInfo();
+                }
                 console.log('✅ Presentation running from uploaded PPTX');
             } else {
-                updateChangeFileBtn(false);
-                console.log('ℹ️ No uploaded file — using static slides + default scripts');
-            }
+                window.__zentrolExternalSlideDeck = false;
+                updateChangeFileBtn(false);            }
         });
 
         // ================================================================
