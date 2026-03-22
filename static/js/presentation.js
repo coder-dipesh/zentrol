@@ -17,6 +17,8 @@ const GESTURE_ACTION_MAP = {
     'point_up': 'resetPresentation',  // ☝️ → R☝️et to First Slide
     'ok': 'resetPresentation'         // 👌 → Reset to First Slide (alternative to point_up)
 };
+// Expose for inline/bootstrap scripts (e.g. SPA) that remap actions at runtime
+window.GESTURE_ACTION_MAP = GESTURE_ACTION_MAP;
 
 const GESTURE_DISPLAY = {
     'victory': { emoji: '✌️', action: 'Next Slide' },
@@ -27,6 +29,9 @@ const GESTURE_DISPLAY = {
 };
 
 const GESTURE_ORDER = ['thumbs_up', 'victory', 'open_palm', 'fist', 'point_up', 'ok'];
+
+/** Gesture hint rows in Control Hub → Actions (see presentation.html `#hub-gesture-hints`) */
+const GESTURE_GUIDE_ITEM_SELECTOR = '#hub-gesture-hints .gesture-item';
 
 // ============================================================================
 // Fullscreen API Helper
@@ -63,7 +68,8 @@ class FullscreenAPI {
         if (!this.container) return;
         
         this.fakeFullscreenActive = true;
-        document.body.classList.add('overflow-hidden');
+        document.body.classList.add('overflow-hidden', 'fake-fullscreen-active');
+        this.container.classList.add('fake-fullscreen');
 
         // Tailwind utility classes for fullscreen layout instead of custom CSS
         this.container.classList.add(
@@ -79,11 +85,8 @@ class FullscreenAPI {
             'pl-0'
         );
 
-        // Make Reveal container use full viewport
-        const revealEl = this.container.querySelector('.reveal');
-        if (revealEl) {
-            revealEl.classList.add('w-screen', 'h-screen');
-        }
+        // Do NOT set .reveal to w-screen — slide column is narrower than 100vw (Control Hub + padding).
+        // Forcing 100vw clips slide images; parent flex chain supplies correct width/height.
 
         // Hide header and mobile controls while in fullscreen
         const elementsToHide = [
@@ -106,7 +109,8 @@ class FullscreenAPI {
         if (!this.container) return;
         
         this.fakeFullscreenActive = false;
-        document.body.classList.remove('overflow-hidden');
+        document.body.classList.remove('overflow-hidden', 'fake-fullscreen-active');
+        this.container.classList.remove('fake-fullscreen');
 
         // Remove fullscreen layout classes
         this.container.classList.remove(
@@ -122,7 +126,7 @@ class FullscreenAPI {
             'pl-0'
         );
 
-        // Reset Reveal container height/width back to default
+        // Reset Reveal container height/width back to default (header visible again)
         const revealEl = this.container.querySelector('.reveal');
         if (revealEl) {
             revealEl.classList.remove('w-screen', 'h-screen');
@@ -145,13 +149,7 @@ class FullscreenAPI {
         // Trigger custom event for listeners
         window.dispatchEvent(new CustomEvent('fakefullscreenchange', { detail: { isFullscreen: false } }));
         
-        // Recalculate Reveal.js layout after exiting fullscreen
-        if (typeof Reveal !== 'undefined') {
-            setTimeout(() => {
-                Reveal.layout();
-                Reveal.sync();
-            }, 100);
-        }
+        scheduleRevealLayoutDebounced(100);
     }
 
     toggleFakeFullscreen() {
@@ -204,20 +202,36 @@ class FullscreenAPI {
         }
     }
 
+    /**
+     * Single handler — do not register fullscreenchange + webkit + moz + ms together:
+     * many browsers emit multiple events for one transition, causing repeated Reveal.layout()
+     * and main-thread stalls ("page not responding").
+     */
     onFullscreenChange(callback) {
-        const events = [
-            'fullscreenchange',
-            'webkitfullscreenchange',
-            'mozfullscreenchange',
-            'MSFullscreenChange'
-        ];
-
-        events.forEach(event => {
-            document.addEventListener(event, () => {
-                callback(this.isFullscreen());
-            });
-        });
+        const handler = () => callback(this.isFullscreen());
+        document.addEventListener('fullscreenchange', handler);
+        document.addEventListener('webkitfullscreenchange', handler);
     }
+}
+
+/** Debounced Reveal layout after fullscreen / resize storms (prevents UI freeze). */
+let __zentrolRevealFsLayoutTimer = null;
+function scheduleRevealLayoutDebounced(delayMs = 120) {
+    if (__zentrolRevealFsLayoutTimer) {
+        clearTimeout(__zentrolRevealFsLayoutTimer);
+    }
+    __zentrolRevealFsLayoutTimer = setTimeout(() => {
+        __zentrolRevealFsLayoutTimer = null;
+        if (typeof Reveal === 'undefined') return;
+        try {
+            Reveal.layout();
+            if (typeof Reveal.sync === 'function') {
+                Reveal.sync();
+            }
+        } catch (e) {
+            console.warn('[Zentrol] Reveal layout failed:', e);
+        }
+    }, delayMs);
 }
 
 // ============================================================================
@@ -232,12 +246,15 @@ class PresentationLogger {
 
     async logAction(action, data = {}) {
         try {
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.csrfToken,
+            };
+            const gls = typeof window !== 'undefined' && window.__ZENTROL_GESTURE_LOG_SECRET__;
+            if (gls) headers['X-Zentrol-Gesture-Log-Secret'] = gls;
             const response = await fetch('/api/log-gesture/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
-                },
+                headers,
                 body: JSON.stringify({
                     action,
                     timestamp: Date.now(),
@@ -402,7 +419,7 @@ class FeedbackManager {
 
     highlightGestureGuide(gestureType, duration = 1200) {
         // Remove all active highlights
-        document.querySelectorAll('.gesture-item').forEach(item => {
+        document.querySelectorAll(GESTURE_GUIDE_ITEM_SELECTOR).forEach(item => {
             item.classList.remove('active');
         });
 
@@ -411,7 +428,7 @@ class FeedbackManager {
         if (index === -1) return;
 
         // Add highlight
-        const items = document.querySelectorAll('.gesture-item');
+        const items = document.querySelectorAll(GESTURE_GUIDE_ITEM_SELECTOR);
         if (items[index]) {
             items[index].classList.add('active');
             
@@ -485,17 +502,11 @@ class PresentationController {
     }
 
     setupFullscreenMonitoring() {
-        // Monitor real fullscreen API changes
+        // Monitor real fullscreen API changes (debounced layout — avoids freeze)
         this.fullscreen.onFullscreenChange((isFullscreen) => {
             this.updateFullscreenUI(isFullscreen);
             this.updateGestureGuide(isFullscreen);
-            // Recalculate Reveal.js layout after fullscreen change
-            if (typeof Reveal !== 'undefined') {
-                setTimeout(() => {
-                    Reveal.layout();
-                    Reveal.sync();
-                }, 100);
-            }
+            scheduleRevealLayoutDebounced(120);
         });
 
         // Monitor fake fullscreen changes (for gesture-based fullscreen)
@@ -503,13 +514,7 @@ class PresentationController {
             const isFullscreen = event.detail.isFullscreen;
             this.updateFullscreenUI(isFullscreen);
             this.updateGestureGuide(isFullscreen);
-            // Recalculate Reveal.js layout after fullscreen change
-            if (typeof Reveal !== 'undefined') {
-                setTimeout(() => {
-                    Reveal.layout();
-                    Reveal.sync();
-                }, 100);
-            }
+            scheduleRevealLayoutDebounced(120);
         });
     }
 
@@ -522,10 +527,11 @@ class PresentationController {
 
         console.log(`📱 Gesture: ${gesture} (${Math.round(confidence * 100)}%)`, metrics);
 
-        // Get action from mapping
-        const actionName = GESTURE_ACTION_MAP[gesture];
+        // Get action from mapping (prefer live object on window for SPA overrides)
+        const map = window.GESTURE_ACTION_MAP || GESTURE_ACTION_MAP;
+        const actionName = map[gesture];
         if (!actionName) {
-            console.log(`⚠️ Unknown gesture: ${gesture}. Available gestures:`, Object.keys(GESTURE_ACTION_MAP));
+            console.log(`⚠️ Unknown gesture: ${gesture}. Available gestures:`, Object.keys(map));
             return;
         }
 
@@ -704,6 +710,9 @@ class PresentationController {
         } catch (error) {
             console.error('Fullscreen error:', error);
             alert('Fullscreen is not supported in your browser.');
+        } finally {
+            // Ensure Reveal catches up even if fullscreenchange is delayed or coalesced oddly.
+            scheduleRevealLayoutDebounced(180);
         }
     }
 
@@ -712,7 +721,11 @@ class PresentationController {
     // ========================================================================
 
     updateFullscreenUI(isFullscreen) {
-        // Update button text
+        const label = document.getElementById('zentrol-fullscreen-label');
+        if (label) {
+            label.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
+            return;
+        }
         const btn = document.querySelector('.control-btn[onclick*="fullscreen"]');
         if (btn) {
             btn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
@@ -721,7 +734,7 @@ class PresentationController {
 
     updateGestureGuide(isFullscreen) {
         // Update gesture guide dynamically
-        const gestureItems = document.querySelectorAll('.gesture-item');
+        const gestureItems = document.querySelectorAll(GESTURE_GUIDE_ITEM_SELECTOR);
         
         // Update open_palm action text (index 2)
         if (gestureItems[2]) {
@@ -744,7 +757,11 @@ class PresentationController {
 
     updateSlideCount() {
         if (!window.Reveal) return;
-        
+        // Optional: window.__zentrolSlideCount overrides DOM count (e.g. dynamic decks).
+        if (typeof window.__zentrolSlideCount === 'number' && window.__zentrolSlideCount > 0) {
+            this.totalSlides = window.__zentrolSlideCount;
+            return;
+        }
         const slides = document.querySelectorAll('.reveal .slides section');
         this.totalSlides = slides.length;
     }
@@ -752,16 +769,18 @@ class PresentationController {
     updateSlideInfo() {
         this.feedback.updateSlideIndicator();
 
-        // Highlight active thumbnail in filmstrip if present
-        const thumbs = document.querySelectorAll('.slide-thumb[data-slide-index]');
-        thumbs.forEach((thumb) => {
-            const idx = parseInt(thumb.dataset.slideIndex || '0', 10);
-            if (idx === this.currentSlide) {
-                thumb.classList.add('ring-2', 'ring-zentrol-teal-500', 'bg-white');
-            } else {
-                thumb.classList.remove('ring-2', 'ring-zentrol-teal-500');
-            }
-        });
+        // Skip DOM filmstrip updates when a host sets this flag (e.g. custom UI).
+        if (!window.__zentrolExternalSlideDeck) {
+            const thumbs = document.querySelectorAll('.slide-thumb[data-slide-index]');
+            thumbs.forEach((thumb) => {
+                const idx = parseInt(thumb.dataset.slideIndex || '0', 10);
+                if (idx === this.currentSlide) {
+                    thumb.classList.add('ring-2', 'ring-zentrol-teal-500', 'bg-white');
+                } else {
+                    thumb.classList.remove('ring-2', 'ring-zentrol-teal-500');
+                }
+            });
+        }
 
         // Update slide count label in filmstrip header
         const label = document.getElementById('slide-count-label');
@@ -771,6 +790,10 @@ class PresentationController {
     }
 
     hideLoadingOverlay() {
+        // Optional: skip auto-hide when host coordinates loading overlay
+        if (typeof window !== 'undefined' && window.__zentrolSkipAutoHideOverlay) {
+            return;
+        }
         setTimeout(() => {
             const overlay = document.getElementById('loading-overlay');
             if (overlay) {
@@ -799,24 +822,32 @@ class PresentationController {
     }
 }
 
+window.PresentationController = PresentationController;
+
 // ============================================================================
-// Initialization
+// Initialization (supports late script injection after DOMContentLoaded)
 // ============================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+function initPresentationController() {
     console.log('🎬 Initializing Presentation Controller...');
+    if (window.presentationController) return;
 
-    // Create controller instance
     window.presentationController = new PresentationController();
 
-    // Wait for Reveal.js to be ready
     if (window.Reveal) {
         Reveal.addEventListener('ready', () => {
             console.log('✅ Presentation Controller ready');
             window.presentationController.updateFullscreenUI(false);
+            window.presentationController.updateGestureGuide(false);
         });
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPresentationController);
+} else {
+    initPresentationController();
+}
 
 // ============================================================================
 // Debug Helpers (Development Only)

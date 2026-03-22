@@ -100,3 +100,26 @@ class SystemPerformance(models.Model):
         if self.true_positives + self.false_positives + self.false_negatives == 0:
             return 0
         return self.true_positives / (self.true_positives + self.false_positives + self.false_negatives)
+
+
+class PresentationAsset(models.Model):
+    """User-owned persisted presentation data for fast dashboard reopen."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='presentation_assets')
+    title = models.CharField(max_length=255)
+    source_filename = models.CharField(max_length=255, blank=True)
+    slides_json = models.JSONField(default=list)
+    slide_count = models.PositiveIntegerField(default=0)
+    is_favorite = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['user', 'updated_at']),
+            models.Index(fields=['user', 'is_favorite']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.slide_count} slides)"

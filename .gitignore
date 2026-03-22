@@ -12,8 +12,10 @@ media/
 venv/
 env/
 
-# IDE
-.vscode/
+# IDE — keep shared workspace settings; ignore local overrides
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
@@ -34,3 +36,9 @@ htmlcov/
 
 # Static files (generated)
 staticfiles/
+
+README.md
+.vscode
+docs/
+static/media.md
+static/media.zip

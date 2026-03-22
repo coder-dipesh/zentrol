@@ -19,7 +19,24 @@
         tailwind.config = {
             theme: {
                 extend: {
+                    boxShadow: {
+                        soft: '0 10px 30px rgba(15, 23, 42, 0.14)',
+                        glow: '0 0 0 3px rgba(20, 184, 166, 0.22)'
+                    },
                     colors: {
+                        /* Reference “Resizable Layout” teal/slate ramp (gradient + glass UI) */
+                        ref: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0ea5a4',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#0f172a'
+                        },
                         zentrol: {
                             navy: {
                                 50:  '#E6EBF0',
@@ -69,6 +86,74 @@
         .reveal img{
             max-width: 100% !important;
         }
+        /* Control Hub — narration “live” dot */
+        #narration-speaking-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            background: rgba(255,255,255,0.25);
+            vertical-align: middle;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        #narration-speaking-dot.active {
+            background: #26a69a;
+            box-shadow: 0 0 0 3px rgba(38, 166, 154, 0.35);
+            animation: zentrol-pulse 1.1s ease-in-out infinite;
+        }
+        @keyframes zentrol-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.45; }
+        }
+        input[type="range"].hub-range {
+            accent-color: #26a69a;
+        }
+        #narration-toggle-btn.narration-on {
+            background-color: #26a69a !important;
+            color: #fff !important;
+        }
+        #narration-toggle-btn.narration-off {
+            background-color: #1e222d !important;
+            color: rgba(255,255,255,0.65) !important;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        /* Waveform: no strip background — bar heights are set by narration.js (RAF + speech boundaries) */
+        #narration-wave-strip {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            min-height: 2.5rem;
+            padding: 6px 4px 4px;
+            background: transparent;
+            border: none;
+        }
+        #narration-wave-strip .narration-wave-bar {
+            width: 2px;
+            min-height: 4px;
+            border-radius: 9999px;
+            align-self: flex-end;
+            flex-shrink: 0;
+            transform-origin: bottom center;
+            will-change: height;
+        }
+        /* Control Hub tab panel fade */
+        .hub-tab-panel {
+            transition: opacity 180ms ease, transform 180ms ease;
+            will-change: opacity, transform;
+        }
+        .hub-tab-panel.is-enter {
+            opacity: 0;
+            transform: translateY(4px);
+        }
+        .hub-tab-panel.is-active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* Shell gradient (matches ref layout if Tailwind classes are bypassed) */
+        .zentrol-shell-bg {
+            background: linear-gradient(to bottom right, #0f766e, #0ea5a4, #06b6d4);
+        }
     </style>
 
     <!-- Reveal.js CSS -->
@@ -77,54 +162,74 @@
 
 </head>
 
-<body data-session-id="{{ session_id }}" class="m-0 p-0 overflow-hidden font-sans antialiased bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 text-white">
-    <!-- CSRF Token -->
+<body data-session-id="{{ session_id }}" class="m-0 flex min-h-screen flex-col overflow-hidden p-0 font-sans antialiased bg-gradient-to-br from-ref-700 via-ref-600 to-cyan-500 text-white zentrol-shell-bg">
     {% csrf_token %}
 
-    <!-- Skip to content link for accessibility -->
     <a href="#presentation-container" class="sr-only">Skip to presentation</a>
 
     <!-- Loading Overlay -->
-    <aside id="loading-overlay" role="alert" aria-live="polite" class="fixed inset-0 w-full h-full bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 flex flex-col justify-center items-center z-[2000] text-white transition-opacity duration-500">
+    <aside id="loading-overlay" role="alert" aria-live="polite" class="fixed inset-0 w-full h-full bg-gradient-to-br from-ref-700 via-ref-600 to-cyan-500 zentrol-shell-bg flex flex-col justify-center items-center z-[2000] text-white transition-opacity duration-500">
         <div class="loader w-12 h-12 border-[5px] border-white/10 border-t-zentrol-teal-500 rounded-full animate-spin mb-5" aria-hidden="true"></div>
         <h3 class="text-xl font-bold mb-2">Initializing Gesture Detection</h3>
         <p class="mb-2">Please allow camera access when prompted</p>
-        <p id="loading-status" class="text-sm opacity-75">Loading MediaPipe...</p>
     </aside>
 
     <!-- Main Presentation Container - full width, panels float over -->
-    <main id="presentation-container" class="relative w-screen h-screen bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 pt-[50px] pb-0 pl-0 pr-0 overflow-hidden transition-all duration-300">
+    <main id="presentation-container" class="relative flex h-screen min-h-0 w-screen flex-col bg-gradient-to-br from-ref-700 via-ref-600 to-cyan-500 zentrol-shell-bg pt-[50px] pb-0 pl-0 pr-0 overflow-hidden transition-all duration-300">
         
         <!-- ========== Slide Filmstrip (desktop toggleable overview) ========== -->
         <button
             type="button"
             id="toggle-filmstrip-btn"
-            class="hidden md:flex fixed left-3 top-[60px] z-[1000] h-9 px-3 rounded-2xl bg-white/95 text-zentrol-navy-700 shadow-md items-center justify-center border border-zentrol-gray-200/80 gap-2 active:scale-95"
-            aria-label="Toggle slide overview"
+            class="tooltip tooltip-right hidden md:inline-flex fixed left-3 top-[56px] z-[1000] h-14 w-14 rounded-2xl bg-white/95 text-zentrol-navy-700 shadow-soft items-center justify-center border border-white/40 ring-1 ring-white/25 outline outline-1 outline-white/10 active:scale-95 transition-all duration-200 hover:bg-white"
+            data-tip="Open filmstrip"
+            title="Open filmstrip"
+            aria-label="Open slide filmstrip"
+            aria-expanded="false"
+            aria-controls="slide-filmstrip"
         >
-            <span class="text-base">▤</span>
-            <span class="text-xs font-medium">Slides</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" class="h-7 w-7" fill="none">
+                <rect x="3" y="3" width="18" height="18" rx="3.5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></rect>
+                <rect x="6.75" y="6.75" width="3.25" height="3.25" rx="0.65" fill="currentColor"></rect>
+                <rect x="10.375" y="6.75" width="3.25" height="3.25" rx="0.65" fill="currentColor"></rect>
+                <rect x="14" y="6.75" width="3.25" height="3.25" rx="0.65" fill="currentColor"></rect>
+                <rect x="6.75" y="10.375" width="3.25" height="3.25" rx="0.65" fill="currentColor"></rect>
+                <rect x="10.375" y="10.375" width="3.25" height="3.25" rx="0.65" fill="currentColor"></rect>
+                <rect x="14" y="10.375" width="3.25" height="3.25" rx="0.65" fill="currentColor"></rect>
+                <rect x="6.75" y="14" width="10.5" height="2.35" rx="1.1" fill="currentColor"></rect>
+            </svg>
         </button>
 
         <aside
             id="slide-filmstrip"
-            class="hidden md:flex fixed top-[100px] bottom-4 left-3 w-44 flex-col rounded-3xl overflow-hidden border border-white/20 bg-white/96 backdrop-blur-xl shadow-2xl z-[950]"
+            class="hidden md:flex fixed top-[56px] bottom-4 left-3 w-36 flex-col rounded-2xl overflow-hidden border border-white/30 bg-white/88 backdrop-blur-xl shadow-soft ring-1 ring-white/20 outline outline-1 outline-white/10 z-[950] transition-all duration-200 ease-out md:translate-x-0 md:opacity-100"
             aria-label="Slide overview"
         >
-            <header class="flex items-center justify-between px-4 py-2 border-b border-zentrol-gray-200/80 bg-zentrol-gray-50/95">
+            <header class="flex items-center justify-between px-2.5 py-1.5 border-b border-zentrol-gray-200/80 bg-zentrol-gray-50/95">
                 <span class="text-xs font-semibold uppercase tracking-wider text-zentrol-navy-700">Slides</span>
-                <span id="slide-count-label" class="text-[11px] text-zentrol-gray-500"></span>
+                <div class="flex items-center gap-2">
+                    <span id="slide-count-label" class="text-[11px] text-zentrol-gray-500"></span>
+                    <button
+                        type="button"
+                        id="close-filmstrip-btn"
+                        class="h-6 w-6 rounded-xl flex items-center justify-center text-zentrol-gray-500 hover:text-zentrol-navy-700 hover:bg-white/70 transition"
+                        aria-label="Close slides sidebar"
+                        title="Close"
+                    >
+                        <span class="tooltip tooltip-left" data-tip="Close Filmstrip">✕</span>
+                    </button>
+                </div>
             </header>
-            <div class="flex-1 overflow-y-auto bg-zentrol-gray-50/60 p-3 space-y-3">
+            <div class="flex-1 overflow-y-auto bg-zentrol-gray-50/60 p-2 space-y-1.5">
                 <!-- Hard-coded 10 thumbnails with overlay numbering badge -->
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="0"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/1.png' %}" alt="Slide 1" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/1.png' %}" alt="Slide 1" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             1
                         </span>
                     </div>
@@ -132,12 +237,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="1"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/2.png' %}" alt="Slide 2" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/2.png' %}" alt="Slide 2" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             2
                         </span>
                     </div>
@@ -145,12 +250,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="2"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/3.png' %}" alt="Slide 3" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/3.png' %}" alt="Slide 3" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             3
                         </span>
                     </div>
@@ -158,12 +263,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="3"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/4.png' %}" alt="Slide 4" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/4.png' %}" alt="Slide 4" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             4
                         </span>
                     </div>
@@ -171,12 +276,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="4"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/5.png' %}" alt="Slide 5" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/5.png' %}" alt="Slide 5" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             5
                         </span>
                     </div>
@@ -184,12 +289,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="5"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/6.png' %}" alt="Slide 6" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/6.png' %}" alt="Slide 6" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             6
                         </span>
                     </div>
@@ -197,12 +302,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="6"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/7.png' %}" alt="Slide 7" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/7.png' %}" alt="Slide 7" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             7
                         </span>
                     </div>
@@ -210,12 +315,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="7"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/8.png' %}" alt="Slide 8" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/8.png' %}" alt="Slide 8" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             8
                         </span>
                     </div>
@@ -223,12 +328,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="8"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/9.png' %}" alt="Slide 9" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/9.png' %}" alt="Slide 9" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             9
                         </span>
                     </div>
@@ -236,12 +341,12 @@
 
                 <button
                     type="button"
-                    class="slide-thumb group w-full rounded-2xl bg-transparent hover:bg-white/40 transition-all duration-150"
+                    class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150"
                     data-slide-index="9"
                 >
-                    <div class="relative w-full overflow-hidden rounded-2xl shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
-                        <img src="{% static 'media/slides/10.png' %}" alt="Slide 10" class="w-full h-20 object-cover" />
-                        <span class="absolute bottom-2 left-2 inline-flex items-center justify-center h-6 w-6 rounded-lg bg-white text-zentrol-navy-600 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.25)]">
+                    <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                        <img src="{% static 'media/slides/10.png' %}" alt="Slide 10" class="w-full h-14 object-cover" />
+                        <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">
                             10
                         </span>
                     </div>
@@ -249,78 +354,207 @@
             </div>
         </aside>
 
-        <!-- ========== RIGHT SIDEBAR: Video + Controls combined ========== -->
-        <aside id="video-info-panel" class="floating-panel fixed top-[60px] right-3 md:right-3 w-[150px] sm:w-[160px] md:w-[190px] hidden md:flex flex-col rounded-2xl overflow-hidden border border-white/20 bg-white/95 dark:bg-zentrol-navy-700/95 backdrop-blur-xl shadow-xl z-[900] select-none text-[11px] md:text-xs" aria-label="Video and gesture controls">
-            <!-- Panel header -->
-            <div class="flex items-center justify-between px-3 py-1.5 border-b border-zentrol-gray-200/80 bg-zentrol-gray-50/90">
-                <span class="text-[10px] font-semibold uppercase tracking-wider text-zentrol-navy-600">Video &amp; Controls</span>
-            </div>
-
-            <!-- Camera feed -->
-            <video 
-                id="camera-feed" 
-                autoplay 
-                playsinline 
-                muted
-                aria-label="Camera feed for gesture detection"
-                class="w-full h-[110px] sm:h-[120px] md:h-[130px] bg-zentrol-navy-600 object-cover -scale-x-100"
-            ></video>
-
-            <!-- Gesture status -->
-            <div id="gesture-overlay" aria-live="polite" aria-atomic="true" class="w-full px-3 py-2 bg-zentrol-teal-700/90 text-white text-center border-b border-zentrol-gray-200/60">
-                <div id="gesture-icon" aria-hidden="true" class="text-3xl my-0.5">👋</div>
-                <div id="gesture-name" class="text-[11px] font-semibold my-0.5 min-h-[16px] text-white">Show your hand...</div>
-                <div id="gesture-confidence" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" class="h-1.5 bg-zentrol-teal-800 rounded overflow-hidden my-1.5">
-                    <div id="confidence-bar" class="h-full bg-zentrol-teal-400 transition-[width] duration-300 ease-out"></div>
-                </div>
-                <div class="text-[10px] mt-1 flex justify-around font-mono text-zentrol-gray-300">
-                    FPS: <span id="fps-counter">0</span> | <span id="latency-counter">0</span>ms
+        <!-- ========== RIGHT SIDEBAR: Control Hub (reference layout — single scroll, stacked sections) ========== -->
+        <aside id="video-info-panel" class="floating-panel fixed top-[60px] right-3 bottom-4 w-[min(320px,calc(100vw-1.5rem))] hidden md:flex flex-col rounded-[28px] overflow-hidden border border-white/20 bg-ref-900/95 backdrop-blur-md shadow-soft ring-1 ring-white/15 outline outline-1 outline-white/10 z-[900] select-none text-[11px] md:text-xs text-white" aria-label="Control hub">
+            <!-- Header + quick nav (scroll within panel) -->
+            <div class="shrink-0 border-b border-white/10 px-4 py-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">Control Hub</p>
+                <div class="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/5 p-1" role="tablist" aria-label="Control hub tabs">
+                    <button type="button" data-hub-tab="camera_controls" class="hub-tab-btn rounded-xl bg-white px-2 py-2 text-[11px] font-semibold text-slate-900 shadow-sm transition">Camera &amp; Control</button>
+                    <button type="button" data-hub-tab="narration" class="hub-tab-btn rounded-xl px-2 py-2 text-[11px] font-medium text-white/70 transition hover:bg-white/5">Narration</button>
                 </div>
             </div>
 
-            <!-- Gesture legend -->
-            <ul id="controls-gesture-panel" class="flex flex-col px-2 pt-2 pb-1 gap-0.5 list-none m-0 text-zentrol-navy-700 border-b border-zentrol-gray-200/80" role="list">
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">👍</span>
-                    <span class="gesture-action text-[11px] font-medium">Previous</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">✌️</span>
-                    <span class="gesture-action text-[11px] font-medium">Next</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">🖐️</span>
-                    <span class="gesture-action text-[11px] font-medium">Fullscreen</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">✊</span>
-                    <span class="gesture-action text-[11px] font-medium">Exit</span>
-                </li>
-                <li class="gesture-item flex items-center px-2.5 py-1.5 rounded-lg transition-all duration-200 hover:bg-zentrol-teal-50">
-                    <span class="gesture-emoji text-lg mr-2" aria-hidden="true">☝️</span>
-                    <span class="gesture-action text-[11px] font-medium">Reset</span>
-                </li>
-            </ul>
+            <div id="hub-scroll-container" class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 pb-5">
+                <div id="hub-tab-camera-controls" class="hub-tab-panel space-y-4 is-active">
+                <!-- Video feed -->
+                <section id="hub-section-camera" class="rounded-xl bg-white/5 p-3 scroll-mt-2 ring-1 ring-white/10">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold tracking-wide text-white">Video Feed</h3>
+                        <span class="rounded-full bg-emerald-500/20 px-2.5 py-1 text-[10px] font-medium text-emerald-300">Live</span>
+                    </div>
+                    <!-- 16:9 + 16px extra height (padding-bottom % is relative to width) -->
+                    <div class="relative w-full overflow-hidden rounded-2xl bg-slate-600/40 ring-1 ring-white/10 pb-[calc(56.25%_+_16px)]">
+                        <video
+                            id="camera-feed"
+                            autoplay
+                            playsinline
+                            muted
+                            aria-label="Camera feed for gesture detection"
+                            class="absolute inset-0 h-full w-full object-cover -scale-x-100 bg-[#1e293b]"
+                        ></video>
+                    </div>
 
-            <!-- Action buttons -->
-            <nav class="px-2.5 pb-2 pt-1 flex flex-col gap-1.5" aria-label="Presentation controls">
-                <button class="control-btn btn btn-xs md:btn-sm w-full gap-1.5 normal-case bg-zentrol-teal-500 hover:bg-zentrol-teal-400 border-none text-white" onclick="Reveal.prev()" aria-label="Previous slide">
-                    <span class="text-base" aria-hidden="true">◀</span>
-                    <span>Previous</span>
-                </button>
-                <button class="control-btn btn btn-xs md:btn-sm w-full gap-1.5 normal-case bg-zentrol-teal-500 hover:bg-zentrol-teal-400 border-none text-white" onclick="Reveal.next()" aria-label="Next slide">
-                    <span>Next</span>
-                    <span class="text-base" aria-hidden="true">▶</span>
-                </button>
-                <button class="control-btn btn btn-xs md:btn-sm w-full gap-1.5 normal-case bg-zentrol-teal-700 hover:bg-zentrol-teal-600 border-none text-white" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
-                    <span class="text-base" aria-hidden="true">⛶</span>
-                    <span>Fullscreen</span>
-                </button>
-            </nav>
+                    <!-- Gesture status (replaces static “show your hand” card) -->
+                    <div id="hub-section-gesture" class="mt-3 scroll-mt-2 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3">
+                        <div id="gesture-overlay" aria-live="polite" aria-atomic="true" class="flex items-start justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Gesture Status</p>
+                                <p id="gesture-name" class="mt-2 text-sm font-medium text-emerald-50">Show your hand...</p>
+                                <div class="mt-3 flex items-center gap-2">
+                                    <span id="gesture-icon" aria-hidden="true" class="text-2xl leading-none">👋</span>
+                                    <div id="gesture-confidence" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" class="h-1.5 flex-1 overflow-hidden rounded-full bg-black/25">
+                                        <div id="confidence-bar" class="h-full rounded-full bg-emerald-400 transition-[width] duration-300 ease-out" style="width:0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <span id="gesture-active-badge" class="shrink-0 rounded-full bg-emerald-400/20 px-2.5 py-1 text-[10px] font-semibold text-emerald-200">Active</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]">
+                        <div class="rounded-xl bg-white/5 px-2 py-2 ring-1 ring-white/10">
+                            <p class="text-white/50">FPS</p>
+                            <p id="fps-counter" class="mt-1 font-semibold tabular-nums text-white">0</p>
+                        </div>
+                        <div class="rounded-xl bg-white/5 px-2 py-2 ring-1 ring-white/10">
+                            <p class="text-white/50">Latency</p>
+                            <p class="mt-1 font-semibold tabular-nums text-white"><span id="latency-counter">0</span><span class="text-white/50"> ms</span></p>
+                        </div>
+                        <div class="rounded-xl bg-white/5 px-2 py-2 ring-1 ring-white/10">
+                            <p class="text-white/50">Status</p>
+                            <p id="engine-live-status" class="mt-1 font-semibold text-emerald-300">On</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Actions -->
+                <section id="hub-section-actions" class="scroll-mt-2 rounded-xl border border-white/10 bg-black/25 p-3 ring-1 ring-black/30">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h3 class="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Actions</h3>
+                        <span class="text-[10px] text-white/40">Primary flow</span>
+                    </div>
+                    <a id="change-file-btn" href="{% url 'dashboard' %}" style="display:none"
+                       class="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/10">
+                        <span>📁</span><span>Change file</span>
+                    </a>
+                    <button type="button"
+                        class="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-zentrol-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-zentrol-teal-400"
+                        onclick="Reveal.next()" aria-label="Next slide">
+                        <span>Next</span><span aria-hidden="true">▶</span>
+                    </button>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" class="rounded-2xl border border-white/15 bg-white/5 px-3 py-3 text-xs font-medium text-white/95 transition hover:bg-white/10" onclick="Reveal.prev()" aria-label="Previous slide">
+                            ◀ Prev
+                        </button>
+                        <button type="button" class="rounded-2xl border border-white/15 bg-white/5 px-3 py-3 text-xs font-medium text-white/95 transition hover:bg-white/10" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
+                            ⛶ Fullscreen
+                        </button>
+                        <button type="button" class="rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-3 text-xs font-medium text-red-200 transition hover:bg-red-500/20" onclick="Reveal.slide(0)" aria-label="Reset to first slide">
+                            ↺ Reset
+                        </button>
+                        <button type="button" class="rounded-2xl border border-white/15 bg-white/5 px-3 py-3 text-xs font-medium text-white/95 transition hover:bg-white/10" onclick="window.selectHubTab && window.selectHubTab('narration')" aria-label="Open narration tab">
+                            🎙 Narration
+                        </button>
+                    </div>
+
+                    <div id="hub-gesture-hints" class="mt-4 border-t border-white/10 pt-3">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <h4 class="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/60">Gesture hints</h4>
+                            <span class="text-[9px] text-white/35">Hands-free</span>
+                        </div>
+                        <ul class="m-0 list-none space-y-0.5 p-0 text-[11px] leading-snug text-white/90">
+                            <li class="gesture-item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-white/10">
+                                <span class="gesture-emoji shrink-0 text-base leading-none" aria-hidden="true">👍</span>
+                                <span class="gesture-action min-w-0">Previous slide</span>
+                            </li>
+                            <li class="gesture-item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-white/10">
+                                <span class="gesture-emoji shrink-0 text-base leading-none" aria-hidden="true">✌️</span>
+                                <span class="gesture-action min-w-0">Next slide</span>
+                            </li>
+                            <li class="gesture-item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-white/10">
+                                <span class="gesture-emoji shrink-0 text-base leading-none" aria-hidden="true">🖐️</span>
+                                <span class="gesture-action min-w-0">Enter Fullscreen</span>
+                            </li>
+                            <li class="gesture-item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-white/10">
+                                <span class="gesture-emoji shrink-0 text-base leading-none" aria-hidden="true">✊</span>
+                                <span class="gesture-action min-w-0">Exit Fullscreen</span>
+                            </li>
+                            <li class="gesture-item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-white/10">
+                                <span class="gesture-emoji shrink-0 text-base leading-none" aria-hidden="true">☝️</span>
+                                <span class="gesture-action min-w-0">First slide</span>
+                            </li>
+                            <li class="gesture-item flex items-center gap-2 rounded-lg px-2 py-1 transition-colors hover:bg-white/10">
+                                <span class="gesture-emoji shrink-0 text-base leading-none" aria-hidden="true">👌</span>
+                                <span class="gesture-action min-w-0">Toggle narration</span>
+                            </li>
+                        </ul>
+                    </div>
+                </section>
+                </div>
+
+                <!-- Narration -->
+                <section id="hub-tab-narration" class="hub-tab-panel hidden is-enter rounded-2xl bg-white/5 p-4 scroll-mt-2">
+                    <div id="narration-panel" class="flex flex-col gap-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Narration</h3>
+                            <div class="flex items-center gap-2">
+                                <span id="narration-speaking-dot" role="status" aria-label="Speaking"></span>
+                                <span id="narration-status-text" class="text-sm font-medium text-white/80">Off</span>
+                            </div>
+                        </div>
+                        <!-- Single speaking animation spanning both controls -->
+                        <div class="flex flex-col gap-0">
+                            <div id="narration-wave-strip" class="w-full" aria-hidden="true">
+                                <span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span><span class="narration-wave-bar"></span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" id="narration-toggle-btn"
+                                    class="narration-off -mt-px rounded-2xl rounded-t-none border border-white/15 border-t-0 bg-white/5 px-3 py-3 text-sm font-medium text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-400/50"
+                                    aria-pressed="false" title="Narration off — click to enable"
+                                    onclick="window.narrationManager?.toggle()">
+                                    <span class="inline-flex w-full items-center justify-center gap-2">
+                                        <svg class="h-4 w-4 shrink-0 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                                        Toggle
+                                    </span>
+                                </button>
+                                <button type="button" id="narration-replay-btn"
+                                    class="-mt-px rounded-2xl rounded-t-none border border-white/15 border-t-0 bg-white/5 px-3 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+                                    title="Replay narration for this slide"
+                                    onclick="window.narrationManager?.replayCurrentSlide()">
+                                    <span class="inline-flex w-full items-center justify-center gap-2">
+                                        <svg class="h-4 w-4 shrink-0 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                        Replay
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="mb-2 flex items-center justify-between text-[10px] text-white/60">
+                                    <span>Speed</span>
+                                    <span id="narration-rate-val" class="font-mono text-white/90">0.95×</span>
+                                </div>
+                                <input id="narration-rate-slider" type="range" min="0.5" max="1.8" step="0.05" value="0.95"
+                                    class="hub-range h-2 w-full cursor-pointer rounded-full bg-black/30 accent-teal-400"
+                                    aria-label="Speech rate"
+                                    oninput="window.narrationManager?.setRate(parseFloat(this.value)); document.getElementById('narration-rate-val').textContent = parseFloat(this.value).toFixed(2) + '×'">
+                            </div>
+                            <div>
+                                <div class="mb-2 flex items-center justify-between gap-2 text-[10px] text-white/60">
+                                    <span>Volume</span>
+                                    <span id="narration-vol-val" class="font-mono tabular-nums text-white/85">100%</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input id="narration-vol-slider" type="range" min="0" max="1" step="0.05" value="1"
+                                        class="hub-range h-2 min-w-0 flex-1 cursor-pointer rounded-full bg-black/30 accent-teal-400"
+                                        aria-label="Speech volume"
+                                        oninput="window.narrationManager?.setVolume(parseFloat(this.value)); document.getElementById('narration-vol-val').textContent = Math.round(parseFloat(this.value) * 100) + '%'">
+                                    <svg class="h-4 w-4 shrink-0 text-teal-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </aside>
 
         <!-- Header: logo only -->
-        <header class="gesture-guide fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm text-zentrol-navy-500 py-2 px-4 border-b border-zentrol-gray-200/80 z-[1000] shadow-sm flex items-center min-h-[50px]" aria-label="Presentation header">
+        <header class="gesture-guide fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md text-zentrol-navy-500 py-2 px-4 border-b border-white/30 z-[1000] shadow-soft flex items-center min-h-[50px] ring-1 ring-white/20" aria-label="Presentation header">
             <a href="/" target="_self" rel="noopener noreferrer" class="flex items-center gap-2" title="Zentrol">
                 <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol Logo" class="h-7 md:h-8 w-auto">
                 <span class="font-semibold text-zentrol-navy-700 text-sm md:text-base">Zentrol</span>
@@ -331,7 +565,7 @@
         <button
             type="button"
             id="toggle-video-panel-btn"
-            class="md:hidden fixed left-2 top-1/2 -translate-y-1/2 z-[1000] h-10 w-10 rounded-2xl bg-white/90 text-zentrol-navy-700 shadow-md flex items-center justify-center border border-zentrol-gray-200/80 active:scale-95"
+            class="md:hidden fixed left-2 top-1/2 -translate-y-1/2 z-[1000] h-10 w-10 rounded-2xl bg-white/90 text-zentrol-navy-700 shadow-soft flex items-center justify-center border border-white/40 ring-1 ring-white/20 outline outline-1 outline-white/10 active:scale-95"
             aria-label="Toggle video panel"
         >
             <span class="text-xl">🎥</span>
@@ -340,76 +574,137 @@
         <button
             type="button"
             id="toggle-controls-panel-btn"
-            class="md:hidden fixed right-2 top-1/2 -translate-y-1/2 z-[1000] h-10 w-10 rounded-2xl bg-white/90 text-zentrol-navy-700 shadow-md flex items-center justify-center border border-zentrol-gray-200/80 active:scale-95"
+            class="md:hidden fixed right-2 top-1/2 -translate-y-1/2 z-[1000] h-10 w-10 rounded-2xl bg-white/90 text-zentrol-navy-700 shadow-soft flex items-center justify-center border border-white/40 ring-1 ring-white/20 outline outline-1 outline-white/10 active:scale-95"
             aria-label="Toggle controls panel"
         >
             <span class="text-lg">☰</span>
         </button>
         
-        <!-- Centered Reveal.js Presentation Container (maximize vertical space) -->
-        <!-- md:px-[220px] chosen so gap between slide and side panels ≈ 24px on desktop -->
-        <section class="h-[calc(100vh-50px)] md:h-[calc(100vh-50px)] flex items-stretch justify-center px-2 sm:px-6 md:px-[210px] pb-0">
-            <div class="reveal h-full w-full max-w-7xl mx-auto overflow-hidden flex items-stretch" role="region" aria-label="Presentation slides">
+        <!-- Center column: slide stage (uniform shell inset + reserved space for fixed Control Hub) -->
+        <div id="presenter-center-stack" class="filmstrip-closed flex min-h-0 w-full flex-1 flex-col overflow-hidden px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4 md:pt-5 md:pb-5 md:pl-5 md:pr-[calc(0.75rem+min(20rem,calc(100vw_-_1.5rem))+0.75rem)]">
+        <section id="presentation-stage" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-white/20 bg-white/10 p-3 sm:p-4">
+                <div class="reveal flex h-full min-h-0 w-full min-w-0 max-w-none flex-1 flex-col overflow-hidden" role="region" aria-label="Presentation slides">
                 <div class="slides h-full w-full overflow-hidden">
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%)] max-h-[calc(100%)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/1.png' %}" alt="Gesture Controlled Presentation - Slide 1">
+                        <img id="slide-image" class="max-w-[calc(100%)] max-h-[calc(100%)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/1.png' %}" alt="Gesture Controlled Presentation - Slide 1">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/2.png' %}" alt="Gesture Controlled Presentation - Slide 2">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/2.png' %}" alt="Gesture Controlled Presentation - Slide 2">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/3.png' %}" alt="Gesture Controlled Presentation - Slide 3">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/3.png' %}" alt="Gesture Controlled Presentation - Slide 3">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/4.png' %}" alt="Gesture Controlled Presentation - Slide 4">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/4.png' %}" alt="Gesture Controlled Presentation - Slide 4">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/5.png' %}" alt="Gesture Controlled Presentation - Slide 5">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/5.png' %}" alt="Gesture Controlled Presentation - Slide 5">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/6.png' %}" alt="Gesture Controlled Presentation - Slide 6">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/6.png' %}" alt="Gesture Controlled Presentation - Slide 6">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/7.png' %}" alt="Gesture Controlled Presentation - Slide 7">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/7.png' %}" alt="Gesture Controlled Presentation - Slide 7">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/8.png' %}" alt="Gesture Controlled Presentation - Slide 8">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/8.png' %}" alt="Gesture Controlled Presentation - Slide 8">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/9.png' %}" alt="Gesture Controlled Presentation - Slide 9">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/9.png' %}" alt="Gesture Controlled Presentation - Slide 9">
                     </section>
 
                     <section class="w-full h-full p-0 m-0 flex items-center justify-center box-border overflow-hidden">
-                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl shadow-2xl bg-white mx-3 my-1" src="{% static 'media/slides/10.png' %}" alt="Gesture Controlled Presentation - Slide 10">
+                        <img id="slide-image" class="max-w-[calc(100%-24px)] max-h-[calc(100%-8px)] w-auto h-auto object-contain rounded-2xl bg-white mx-3 my-1" src="{% static 'media/slides/10.png' %}" alt="Gesture Controlled Presentation - Slide 10">
                     </section>
+                </div>
                 </div>
             </div>
         </section>
 
+        </div>
+
     </main>
 
-    <!-- JavaScript Libraries -->
+    <!-- JS Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
-
-    <!-- MediaPipe Dependencies -->
     <script src="{% static 'mediapipe/hands.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
-    <!-- Custom Scripts -->
+    <!-- Custom Scripts (load order matters) -->
     <script src="{% static 'js/gesture_engine.js' %}"></script>
+    <script src="{% static 'js/narration.js' %}"></script>
     <script src="{% static 'js/presentation.js' %}"></script>
+    {{ initial_slides|json_script:"initial-slides-json" }}
 
     <!-- Main Application Script -->
     <script>
         'use strict';
+
+        // ================================================================
+        // Control Hub tabs (Camera & Control | Narration)
+        // ================================================================
+        (function initHubTabs() {
+            const panels = {
+                camera_controls: document.getElementById('hub-tab-camera-controls'),
+                narration: document.getElementById('hub-tab-narration'),
+            };
+
+            const DURATION_MS = 180;
+            window.selectHubTab = function selectHubTab(key) {
+                Object.entries(panels).forEach(([name, panel]) => {
+                    if (!panel) return;
+                    const isTarget = name === key;
+
+                    if (isTarget) {
+                        panel.classList.remove('hidden');
+                        panel.classList.add('is-enter');
+                        panel.classList.remove('is-active');
+                        requestAnimationFrame(() => {
+                            panel.classList.remove('is-enter');
+                            panel.classList.add('is-active');
+                        });
+                    } else if (!panel.classList.contains('hidden')) {
+                        panel.classList.remove('is-active');
+                        panel.classList.add('is-enter');
+                        window.setTimeout(() => {
+                            panel.classList.add('hidden');
+                        }, DURATION_MS);
+                    } else {
+                        panel.classList.remove('is-active');
+                        panel.classList.add('is-enter');
+                    }
+                });
+
+                document.querySelectorAll('[data-hub-tab]').forEach((btn) => {
+                    const on = btn.getAttribute('data-hub-tab') === key;
+                    btn.classList.toggle('bg-white', on);
+                    btn.classList.toggle('text-slate-900', on);
+                    btn.classList.toggle('font-semibold', on);
+                    btn.classList.toggle('shadow-sm', on);
+                    btn.classList.toggle('text-white/70', !on);
+                    btn.classList.toggle('font-medium', !on);
+                });
+            };
+
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('[data-hub-tab]').forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        const key = btn.getAttribute('data-hub-tab');
+                        if (key && window.selectHubTab) window.selectHubTab(key);
+                    });
+                });
+                if (window.selectHubTab) window.selectHubTab('camera_controls');
+            });
+        })();
 
         // ================================================================
         // Initialize Reveal.js
@@ -427,140 +722,395 @@
             margin: 0,
             minScale: 1,
             maxScale: 1,
-            
-            // Accessibility
             keyboardCondition: 'focused',
-            
-            // Performance
             viewDistance: 3,
             mobileViewDistance: 2
         });
 
         // ================================================================
+        // Slide Filmstrip open/close (desktop)
+        // ================================================================
+        function scheduleRevealLayout() {
+            if (typeof Reveal === 'undefined' || typeof Reveal.layout !== 'function') return;
+            requestAnimationFrame(() => {
+                Reveal.layout();
+                if (typeof Reveal.sync === 'function') Reveal.sync();
+                window.setTimeout(() => {
+                    Reveal.layout();
+                }, 60);
+            });
+        }
+
+        function setFilmstripOpen(isOpen) {
+            const filmstrip = document.getElementById('slide-filmstrip');
+            const toggleBtn = document.getElementById('toggle-filmstrip-btn');
+            const stage = document.getElementById('presentation-stage');
+            const stack = document.getElementById('presenter-center-stack');
+            if (!filmstrip || !toggleBtn) return;
+
+            // Desktop: extra left inset only while filmstrip is open (shell padding handles closed state).
+            if (stage) {
+                if (window.innerWidth >= 768) {
+                    /* Filmstrip: left-3 + w-36 + small gap — clear thumbnails; closed: full width inside shell */
+                    stage.style.paddingLeft = isOpen ? '168px' : '0';
+                    stage.classList.toggle('filmstrip-collapsed', !isOpen);
+                } else {
+                    stage.style.paddingLeft = '';
+                    stage.classList.remove('filmstrip-collapsed');
+                }
+            }
+            if (stack && window.innerWidth >= 768) {
+                stack.classList.toggle('filmstrip-closed', !isOpen);
+            } else if (stack) {
+                stack.classList.remove('filmstrip-closed');
+            }
+
+            if (isOpen) {
+                // On desktop, `md:flex` overrides base `hidden`, so we toggle using md:hidden/md:flex.
+                filmstrip.classList.remove('md:hidden');
+                filmstrip.classList.add('md:flex');
+                toggleBtn.classList.add('md:hidden');
+                toggleBtn.setAttribute('aria-expanded', 'true');
+
+                // Animate in
+                filmstrip.classList.remove('md:-translate-x-2', 'md:opacity-0');
+                filmstrip.classList.add('md:translate-x-0', 'md:opacity-100');
+            } else {
+                // Animate out first, then hide after transition
+                filmstrip.classList.add('md:-translate-x-2', 'md:opacity-0');
+                filmstrip.classList.remove('md:translate-x-0', 'md:opacity-100');
+
+                toggleBtn.classList.remove('md:hidden');
+                toggleBtn.setAttribute('aria-expanded', 'false');
+
+                window.setTimeout(() => {
+                    filmstrip.classList.add('md:hidden');
+                    filmstrip.classList.remove('md:flex');
+                }, 210);
+            }
+
+            scheduleRevealLayout();
+        }
+        window.setFilmstripOpen = setFilmstripOpen;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('toggle-filmstrip-btn');
+            const closeBtn = document.getElementById('close-filmstrip-btn');
+
+            // Default: filmstrip closed on desktop — stage uses full shell width (reference layout).
+            setFilmstripOpen(false);
+
+            let resizeDebounce = null;
+            window.addEventListener('resize', () => {
+                if (resizeDebounce) clearTimeout(resizeDebounce);
+                resizeDebounce = setTimeout(() => {
+                    resizeDebounce = null;
+                    const open = toggleBtn ? toggleBtn.classList.contains('md:hidden') : true;
+                    setFilmstripOpen(open);
+                }, 200);
+            }, { passive: true });
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setFilmstripOpen(true);
+                });
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setFilmstripOpen(false);
+                });
+            }
+        });
+
+        // ================================================================
+        // Load slides from sessionStorage (set by home.html upload)
+        // Falls back to static slides gracefully
+        // ================================================================
+        let uploadedSlides = [];
+        const serverSlides = JSON.parse(document.getElementById('initial-slides-json')?.textContent || '[]');
+
+        function loadUploadedSlides() {
+            try {
+                if (Array.isArray(serverSlides) && serverSlides.length > 0) {
+                    uploadedSlides = serverSlides;
+                    sessionStorage.setItem('zentrol_slides', JSON.stringify(uploadedSlides));
+                    console.log(`📂 Loaded ${uploadedSlides.length} saved slides from server`);
+                    return true;
+                }
+                const raw = sessionStorage.getItem('zentrol_slides');
+                if (!raw) return false;
+                uploadedSlides = JSON.parse(raw);
+                if (!Array.isArray(uploadedSlides) || uploadedSlides.length === 0) return false;
+                console.log(`📂 Loaded ${uploadedSlides.length} uploaded slides from session`);
+                return true;
+            } catch (e) {
+                console.warn('Could not load uploaded slides:', e);
+                return false;
+            }
+        }
+
+        function injectUploadedSlides(slides) {
+            const slidesContainer = document.querySelector('.reveal .slides');
+            if (!slidesContainer) return;
+
+            // Clear existing static slides
+            slidesContainer.innerHTML = '';
+
+            slides.forEach((slide, i) => {
+                const section = document.createElement('section');
+
+                if (slide.imageUrl) {
+                    const img = document.createElement('img');
+                    img.src = slide.imageUrl;
+                    img.alt = slide.text
+                        ? slide.text.substring(0, 120)
+                        : `Slide ${i + 1}`;
+                    img.style.maxWidth = 'calc(100% - 40px)';
+                    img.style.maxHeight = 'calc(100% - 40px)';
+                    img.style.objectFit = 'contain';
+                    img.style.borderRadius = '12px';
+                    section.appendChild(img);
+                } else {
+                    // Text-only fallback slide
+                    section.style.cssText = `
+                        background: #fff; padding: 40px; border-radius: 16px;
+                        text-align: left; color: #0F1E2E;
+                        max-width: calc(100% - 80px); max-height: calc(100% - 80px);
+                        overflow: hidden;
+                    `;
+                    const slideNum = document.createElement('p');
+                    slideNum.textContent = `Slide ${i + 1}`;
+                    slideNum.style.cssText = 'font-size:12px; color:#9CA3AF; margin-bottom:16px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;';
+                    section.appendChild(slideNum);
+
+                    const content = document.createElement('p');
+                    content.textContent = slide.text || '(No text on this slide)';
+                    content.style.cssText = 'font-size:18px; line-height:1.7; color:#1F2933;';
+                    section.appendChild(content);
+                }
+
+                slidesContainer.appendChild(section);
+            });
+
+            // Sync Reveal after DOM update
+            setTimeout(() => {
+                Reveal.sync();
+                Reveal.slide(0);
+            }, 100);
+        }
+
+        function renderDynamicFilmstrip(slides) {
+            const filmstripBody = document.querySelector('#slide-filmstrip .flex-1.overflow-y-auto');
+            if (!filmstripBody || !Array.isArray(slides) || slides.length === 0) return;
+
+            const thumbsHtml = slides.map((slide, i) => {
+                const idx = i + 1;
+                const imageUrl = slide && slide.imageUrl ? String(slide.imageUrl) : '';
+                const safeAltRaw = slide && slide.text ? String(slide.text).slice(0, 80) : `Slide ${idx}`;
+                const safeAlt = safeAltRaw.replace(/"/g, '&quot;');
+                if (imageUrl) {
+                    return `
+                        <button type="button" class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150" data-slide-index="${i}">
+                            <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                                <img src="${imageUrl}" alt="${safeAlt}" class="w-full h-14 object-cover" />
+                                <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">${idx}</span>
+                            </div>
+                        </button>
+                    `;
+                }
+                return `
+                    <button type="button" class="slide-thumb group w-full rounded-md bg-transparent hover:bg-white/40 transition-all duration-150" data-slide-index="${i}">
+                        <div class="relative w-full overflow-hidden rounded-md shadow-sm group-hover:shadow-md border border-zentrol-gray-200/70 bg-white">
+                            <div class="grid h-14 w-full place-items-center bg-zentrol-gray-100 text-[11px] text-zentrol-gray-500">No preview</div>
+                            <span class="absolute bottom-1 left-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded px-0.5 bg-white text-zentrol-navy-600 text-[11px] font-semibold shadow-sm">${idx}</span>
+                        </div>
+                    </button>
+                `;
+            }).join('');
+
+            filmstripBody.innerHTML = thumbsHtml;
+        }
+
+        function bindFilmstripNavigation() {
+            const filmstrip = document.getElementById('slide-filmstrip');
+            if (!filmstrip || filmstrip.dataset.navBound === '1') return;
+            filmstrip.dataset.navBound = '1';
+
+            filmstrip.addEventListener('click', (event) => {
+                const thumb = event.target.closest('.slide-thumb[data-slide-index]');
+                if (!thumb) return;
+                const idx = Number.parseInt(thumb.dataset.slideIndex || '', 10);
+                if (!Number.isNaN(idx) && typeof Reveal !== 'undefined') {
+                    Reveal.slide(idx);
+                }
+            });
+        }
+
+        // Inject uploaded slides as narration scripts into NarrationManager
+        function patchNarrationScripts(slides) {
+            slides.forEach((slide, i) => {
+                // Priority: real slide text → speaker notes → nothing
+                const text = (slide.text && slide.text.trim())
+                    ? slide.text.trim()
+                    : (slide.notes && slide.notes.trim())
+                        ? slide.notes.trim()
+                        : null;
+
+                if (text) {
+                    window.narrationManager.setSlideScript(i, text);
+                }
+            });
+            console.log('✅ Narration scripts patched with real slide text');
+        }
+
+        // Show/hide "change file" button based on whether slides are loaded
+        function updateChangeFileBtn(hasFile) {
+            const btn = document.getElementById('change-file-btn');
+            if (btn) btn.style.display = hasFile ? 'flex' : 'none';
+        }
+
+        // ================================================================
+        // Initialize Narration Manager
+        // ================================================================
+        window.narrationManager = new NarrationManager({
+            rate: 0.95,
+            pitch: 1.0,
+            volume: 1.0,
+            autoNarrate: false,
+            debug: false
+        });
+
+        // Wire up speaking dot animation
+        window.narrationManager.onSpeakStart = () => {
+            const dot = document.getElementById('narration-speaking-dot');
+            if (dot) dot.classList.add('active');
+        };
+        window.narrationManager.onSpeakEnd = () => {
+            const dot = document.getElementById('narration-speaking-dot');
+            if (dot) dot.classList.remove('active');
+        };
+
+        // Hook into Reveal.js slide changes
+        Reveal.addEventListener('slidechanged', (event) => {
+            window.narrationManager.narrateSlide(event.indexh);
+        });
+
+        // After Reveal is ready: inject slides + patch narration
+        Reveal.addEventListener('ready', () => {
+            bindFilmstripNavigation();
+            const hasUploaded = loadUploadedSlides();
+
+            if (hasUploaded) {
+                window.__zentrolExternalSlideDeck = true;
+                window.__zentrolSlideCount = uploadedSlides.length;
+                injectUploadedSlides(uploadedSlides);
+                renderDynamicFilmstrip(uploadedSlides);
+                patchNarrationScripts(uploadedSlides);
+                updateChangeFileBtn(true);
+                if (window.presentationController) {
+                    window.presentationController.updateSlideCount();
+                    window.presentationController.updateSlideInfo();
+                }
+                console.log('✅ Presentation running from uploaded PPTX');
+            } else {
+                window.__zentrolExternalSlideDeck = false;
+                updateChangeFileBtn(false);            }
+        });
+
+        // ================================================================
+        // ok gesture → toggle narration  (reassigned from duplicate reset)
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.GESTURE_ACTION_MAP) {
+                GESTURE_ACTION_MAP['ok'] = 'toggleNarration';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.PresentationController) {
+                PresentationController.prototype.toggleNarration = function() {
+                    const enabled = window.narrationManager?.toggle();
+                    console.log(`🔊 Narration ${enabled ? 'enabled' : 'disabled'} via gesture`);
+                };
+            }
+        });
+
+        // ================================================================
         // Initialize Gesture Engine
         // ================================================================
-        var videoElement = document.getElementById('camera-feed');
-        var gestureEngine = new GestureEngine({
+        const videoElement = document.getElementById('camera-feed');
+        const gestureEngine = new GestureEngine({
             profile: 'balanced',  // Options: 'responsive', 'balanced', 'high-accuracy'
             debug: false          // Set to true for development
         });
 
         async function initializeGestureControl() {
             console.log('🎬 Starting gesture control initialization...');
-
             try {
                 const success = await gestureEngine.start(videoElement);
-
                 if (success) {
                     console.log('✅ Gesture control initialized successfully');
+                    const live = document.getElementById('engine-live-status');
+                    if (live) {
+                        live.textContent = 'On';
+                        live.classList.remove('text-red-400');
+                        live.classList.add('text-emerald-400');
+                    }
                     startPerformanceMonitoring();
                 } else {
                     throw new Error('Gesture engine failed to start');
                 }
-
             } catch (error) {
                 console.error('❌ Initialization failed:', error);
-                
+                const live = document.getElementById('engine-live-status');
+                if (live) {
+                    live.textContent = 'Off';
+                    live.classList.remove('text-emerald-400');
+                    live.classList.add('text-red-400');
+                }
                 const statusEl = document.getElementById('loading-status');
                 if (statusEl) {
                     statusEl.innerHTML = `
                         <span class="text-red-400">
                             ⚠️ Failed to initialize gesture control<br>
                             <small>${error.message}</small>
-                        </span>
-                    `;
+                        </span>`;
                 }
-
-                // Hide overlay after delay
                 setTimeout(() => {
                     const overlay = document.getElementById('loading-overlay');
-                    if (overlay) {
-                        overlay.style.display = 'none';
-                    }
+                    if (overlay) overlay.style.display = 'none';
                 }, 3000);
             }
         }
 
         // ================================================================
-        // Performance Monitoring (FIXED)
+        // Performance Monitoring
         // ================================================================
         function startPerformanceMonitoring() {
             setInterval(() => {
-                // Safe access with null checks
-                if (!gestureEngine || !gestureEngine.metrics) return;
-                
+                if (!gestureEngine?.metrics) return;
                 const metrics = gestureEngine.metrics.getMetrics();
-                
                 const fpsEl = document.getElementById('fps-counter');
                 const latencyEl = document.getElementById('latency-counter');
-                
                 if (fpsEl) fpsEl.textContent = Math.round(metrics.fps);
                 if (latencyEl) latencyEl.textContent = Math.round(metrics.avgDetectionTime);
             }, 1000);
         }
 
         // ================================================================
-        // Cleanup on Page Unload
+        // Cleanup
         // ================================================================
         window.addEventListener('beforeunload', () => {
-            if (gestureEngine) {
-                gestureEngine.stop();
-            }
+            window.narrationManager?.stop();
+            gestureEngine?.stop();
         });
 
-        // ================================================================
-        // Start Application
-        // ================================================================
         window.addEventListener('load', () => {
             initializeGestureControl();
-            
-            // Mobile: toggle side panels
-            const videoPanel = document.getElementById('video-info-panel');
-            const controlsPanel = document.getElementById('controls-gesture-panel');
-            const videoBtn = document.getElementById('toggle-video-panel-btn');
-            const controlsBtn = document.getElementById('toggle-controls-panel-btn');
-            const filmstrip = document.getElementById('slide-filmstrip');
-            const filmstripBtn = document.getElementById('toggle-filmstrip-btn');
-
-            function isMobile() {
-                return window.innerWidth < 768;
-            }
-
-            if (videoBtn && videoPanel) {
-                videoBtn.addEventListener('click', () => {
-                    if (!isMobile()) return;
-                    videoPanel.classList.toggle('hidden');
-                    videoPanel.classList.toggle('flex');
-                });
-            }
-
-            if (controlsBtn && controlsPanel) {
-                controlsBtn.addEventListener('click', () => {
-                    if (!isMobile()) return;
-                    controlsPanel.classList.toggle('hidden');
-                    controlsPanel.classList.toggle('flex');
-                });
-            }
-
-            // Desktop: toggle filmstrip & adjust video panel to avoid overlap
-            if (filmstripBtn && filmstrip) {
-                filmstripBtn.addEventListener('click', () => {
-                    const isHidden = filmstrip.classList.contains('hidden');
-                    filmstrip.classList.toggle('hidden', !isHidden ? true : false);
-                    filmstrip.classList.toggle('flex', isHidden);
-                });
-            }
-
-            // Slide filmstrip thumbnail navigation
-            const thumbs = document.querySelectorAll('.slide-thumb[data-slide-index]');
-            thumbs.forEach((thumb) => {
-                thumb.addEventListener('click', () => {
-                    const index = parseInt(thumb.dataset.slideIndex || '0', 10);
-                    if (!Number.isNaN(index) && window.Reveal) {
-                        window.Reveal.slide(index);
-                    }
-                });
-            });
         });
 
         // ================================================================
@@ -568,17 +1118,12 @@
         // ================================================================
         window.addEventListener('error', (event) => {
             console.error('Global error:', event.error);
-            
-            // Prevent complete failure
             event.preventDefault();
         });
 
-        // ================================================================
-        // Keyboard Shortcuts Info (CORRECTED)
-        // ================================================================
         console.log(`
 ╔════════════════════════════════════════════════════════╗
-║  GESTURE-CONTROLLED PRESENTATION                       ║
+║  ZENTROL – GESTURE-CONTROLLED PRESENTATION             ║
 ╠════════════════════════════════════════════════════════╣
 ║  Gestures:                                             ║
 ║    👍 Thumbs Up     → Previous Slide                  ║
@@ -586,16 +1131,18 @@
 ║    🖐️ Open Palm     → Toggle Fullscreen               ║
 ║    ✊ Fist          → Exit Fullscreen                 ║
 ║    ☝️ Point Up      → Reset to First Slide            ║
+║    👌 OK Sign       → Toggle Narration  ← NEW         ║
 ║                                                        ║
-║  Keyboard Shortcuts:                                   ║
-║    Ctrl/Cmd + F     → Toggle Fullscreen               ║
-║    Ctrl/Cmd + R     → Reset Presentation              ║
-║    Arrow Keys       → Navigate Slides                 ║
+║  Narration:                                            ║
+║    • Auto-reads each slide on change                  ║
+║    • Speed & volume sliders in sidebar                ║
+║    • Replay button for current slide                  ║
+║    • Edit SLIDE_SCRIPTS in narration.js to customize  ║
 ╚════════════════════════════════════════════════════════╝
         `);
     </script>
 
-    <!-- Structured Data for SEO -->
+    <!-- Structured Data -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -604,11 +1151,7 @@
         "description": "Interactive presentation system controlled by hand gestures using MediaPipe and AI",
         "applicationCategory": "Presentation Software",
         "operatingSystem": "Web Browser",
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-        }
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
     }
     </script>
 </body>

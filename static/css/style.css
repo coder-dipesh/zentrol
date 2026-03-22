@@ -2,7 +2,9 @@
 
 /* Reveal.js integration - must keep for proper slide display */
 #presentation-container .reveal {
-    height: calc(100vh - 50px);
+    /* Fill the stage column */
+    height: 100%;
+    min-height: 0;
     margin-top: 0;
     width: 100%; /* Use full width of presentation container (which already accounts for camera) */
     overflow: hidden; /* Prevent overflow */
@@ -33,33 +35,48 @@
     height: auto !important;
     object-fit: contain;
     border-radius: 20px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
     background: #fff;
     padding: 0;
     margin: 20px;
 }
 
+/* Filmstrip collapsed (desktop): stage is wider — let slides use full width; Reveal.layout() runs from presentation.html */
+@media (min-width: 768px) {
+    #presentation-container:not(.fake-fullscreen) #presentation-stage.filmstrip-collapsed .reveal .slides section img {
+        max-width: calc(100% - 16px) !important;
+        max-height: calc(100% - 16px) !important;
+        margin: 8px !important;
+    }
+
+    /* Slides panel closed: extra left shell inset so stage clears floating “open slides” control */
+    #presenter-center-stack.filmstrip-closed {
+        padding-left: 4.75rem; /* ~76px: 12px + 56px button + breathing room */
+    }
+}
+
 /* Fullscreen specific styles - Real Fullscreen API */
+/* Match presentation shell: ref layout gradient (teal → cyan) */
 :-webkit-full-screen #presentation-container {
-    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    background: linear-gradient(to bottom right, #0f766e, #0ea5a4, #06b6d4);
     padding-left: 0 !important;
     padding-top: 0 !important;
 }
 
 :-moz-full-screen #presentation-container {
-    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    background: linear-gradient(to bottom right, #0f766e, #0ea5a4, #06b6d4);
     padding-left: 0 !important;
     padding-top: 0 !important;
 }
 
 :-ms-fullscreen #presentation-container {
-    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    background: linear-gradient(to bottom right, #0f766e, #0ea5a4, #06b6d4);
     padding-left: 0 !important;
     padding-top: 0 !important;
 }
 
 :fullscreen #presentation-container {
-    background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+    background: linear-gradient(to bottom right, #0f766e, #0ea5a4, #06b6d4);
     padding-left: 0 !important;
     padding-top: 0 !important;
 }
@@ -120,6 +137,16 @@
     color: #1FB6AA !important; /* teal text when active */
 }
 
+/* Control Hub (dark panel): gesture hint row highlight */
+#video-info-panel .gesture-item.active {
+    background: rgba(45, 212, 191, 0.12) !important;
+    color: #99f6e4 !important;
+}
+
+#video-info-panel .gesture-item.active .gesture-action {
+    color: #ccfbf1 !important;
+}
+
 /* Header/gesture guide responsive adjustments */
 .gesture-guide {
     min-height: 50px;
@@ -164,26 +191,40 @@
     background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
 }
 
-/* Reveal.js fullscreen adjustments */
+/*
+ * Fake fullscreen: slide column is NOT full viewport width (Control Hub + padding).
+ * Use 100% of the slide stack — never 100vw — or images scale to viewport and get clipped.
+ */
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal {
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
     margin-left: 0 !important;
 }
 
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides {
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
 }
 
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides section {
-    width: 100vw !important;
-    height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
 }
 
 .fake-fullscreen-active #presentation-container.fake-fullscreen .reveal .slides section img {
-    max-width: calc(100vw - 40px) !important;
-    max-height: calc(100vh - 40px) !important;
+    max-width: calc(100% - 24px) !important;
+    max-height: calc(100% - 24px) !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    margin: 12px !important;
 }
 
 /* Reset Reveal.js when NOT in fullscreen - prevent overflow */
@@ -223,21 +264,30 @@
     transition: width 0.3s ease;
 }
 
-/* Reveal.js progress bar - white color, full screen width */
-.reveal .progress {
+/* Reveal.js bottom progress — Zentrol shell gradient (overrides theme blue) */
+#presentation-container .reveal .progress {
     position: fixed !important;
     left: 0 !important;
     right: 0 !important;
     width: 100vw !important;
     bottom: 0 !important;
-    height: 3px !important;
-    color: white !important;
-    background: rgba(255, 255, 255, 0.2) !important;
+    height: 4px !important;
+    color: transparent !important;
+    background: rgba(15, 23, 42, 0.35) !important;
     z-index: 1000 !important;
 }
 
-.reveal .progress span {
-    background: white !important;
+#presentation-container .reveal .progress span {
+    background: linear-gradient(90deg, #0f766e, #0ea5a4, #06b6d4) !important;
+    box-shadow: none !important;
+}
+
+/* Same treatment in native fullscreen */
+:-webkit-full-screen #presentation-container .reveal .progress span,
+:-moz-full-screen #presentation-container .reveal .progress span,
+:-ms-fullscreen #presentation-container .reveal .progress span,
+:fullscreen #presentation-container .reveal .progress span {
+    background: linear-gradient(90deg, #0f766e, #0ea5a4, #06b6d4) !important;
 }
 
 /* Camera feed hidden state - handled by Tailwind's hidden class */
