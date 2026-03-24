@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Gesture-controlled presentation system using MediaPipe and Reveal.js">
     <title>Zentrol | Gesture Controlled Presentation</title>
-
+ 
     {% load static %}
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
     <link rel="apple-touch-icon" href="{% static 'media/logo/zentrol-icon.svg' %}">
-
+ 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -26,7 +26,7 @@
                                 200: '#99A9C0',
                                 300: '#7288A8',
                                 400: '#4B6790',
-                                500: '#0F1E2E',
+                                500: '#0F1E2E', // Primary
                                 600: '#0D1A28',
                                 700: '#0B1622',
                                 800: '#09121C',
@@ -38,7 +38,7 @@
                                 200: '#9CE6DE',
                                 300: '#77DCD1',
                                 400: '#52D2C4',
-                                500: '#1FB6AA',
+                                500: '#1FB6AA', // Accent
                                 600: '#1AA096',
                                 700: '#168A82',
                                 800: '#11746E',
@@ -46,11 +46,11 @@
                             },
                             gray: {
                                 50:  '#F9FAFB',
-                                100: '#F4F6F8',
+                                100: '#F4F6F8', // Background
                                 200: '#E5E7EB',
                                 300: '#D1D5DB',
                                 400: '#9CA3AF',
-                                500: '#6B7280',
+                                500: '#6B7280', // Body text
                                 600: '#4B5563',
                                 700: '#374151',
                                 800: '#1F2933',
@@ -62,134 +62,176 @@
             }
         }
     </script>
-
+ 
     <!-- Reveal.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
-
-    <!-- Custom CSS -->
+ 
+    <!-- Essential Custom CSS Only -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
+ 
     <style>
-        /* Reveal.js integration */
+        /* Essential CSS only - animations and complex selectors that can't be done with Tailwind */
+        
+        /* Reveal.js integration - must keep */
         #presentation-container .reveal {
             height: calc(100vh - 50px);
             margin-top: 0;
             width: 100%;
         }
+        
+        /* Mobile adjustments */
         @media (max-width: 768px) {
             #presentation-container .reveal {
                 height: calc(100vh - 50px - 70px) !important;
             }
         }
-        #presentation-container .reveal .slides { height: 100%; width: 100%; }
-        #presentation-container .reveal .slides section {
-            width: 100% !important; height: 100% !important;
-            padding: 0 !important; margin: 0 !important;
-            display: flex !important; align-items: center !important;
-            justify-content: center !important; box-sizing: border-box;
+ 
+        #presentation-container .reveal .slides {
+            height: 100%;
+            width: 100%;
         }
+ 
+        #presentation-container .reveal .slides section {
+            width: 100% !important;
+            height: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box;
+        }
+ 
         #presentation-container .reveal .slides section img {
             max-width: calc(100% - 40px) !important;
             max-height: calc(100% - 40px) !important;
-            width: auto !important; height: auto !important;
-            object-fit: contain; border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            background: #fff; padding: 0; margin: 20px;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            background: #fff;
+            padding: 0;
+            margin: 20px;
         }
-
+ 
         /* Animations */
-        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
-        @keyframes highlight { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
-
-        /* Fake fullscreen */
-        .fake-fullscreen-active { overflow: hidden; }
-        .fake-fullscreen-active #presentation-container.fake-fullscreen {
-            position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh; z-index: 9999;
-            background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
-        .hidden-in-fake-fullscreen { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.3s ease; }
-        .fake-fullscreen-active #slide-indicator { z-index: 10000; }
-        #confidence-bar { transition: width 0.3s ease; }
-
-        /* ── Narration Panel ───────────────────────────────────────────── */
-        #narration-panel {
-            background: linear-gradient(135deg, #0F1E2E 0%, #11746E 100%);
-            border-top: 1px solid rgba(31,182,170,0.3);
-            transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1),
-                        opacity    0.25s ease;
+ 
+        @keyframes highlight {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+ 
+        /* Fullscreen mode */
+        .fake-fullscreen-active {
             overflow: hidden;
         }
-        #narration-panel.collapsed { max-height: 0 !important; opacity: 0; }
-
-        /* Toggle button states */
-        #narration-toggle-btn.narration-on  { background: #1FB6AA; color: #fff; }
-        #narration-toggle-btn.narration-off { background: #374151; color: #9CA3AF; }
-
-        /* Speaking pulse animation */
-        @keyframes speakPulse {
-            0%,100% { transform: scale(1);   opacity: 1; }
-            50%      { transform: scale(1.4); opacity: 0.6; }
+ 
+        .fake-fullscreen-active #presentation-container.fake-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: linear-gradient(135deg, #0F1E2E 0%, #1FB6AA 100%);
         }
-        #narration-speaking-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: #1FB6AA;
-            display: inline-block;
-            opacity: 0;
+ 
+        .hidden-in-fake-fullscreen {
+            opacity: 0 !important;
+            pointer-events: none !important;
             transition: opacity 0.3s ease;
         }
-        #narration-speaking-dot.active {
+ 
+        .fake-fullscreen-active #slide-indicator {
+            z-index: 10000;
+        }
+ 
+ 
+        /* ================================================================
+           AAC Lip-to-Speech styles
+           ================================================================ */
+ 
+        /* Floating caption bar over slide */
+        #aac-caption-bar {
+            position: fixed;
+            bottom: 76px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            z-index: 5000;
+            min-width: 300px;
+            max-width: 78vw;
+            background: rgba(10, 20, 30, 0.93);
+            border: 1px solid rgba(31,182,170,0.45);
+            border-radius: 999px;
+            padding: 10px 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            backdrop-filter: blur(10px);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+        #aac-caption-bar.visible {
             opacity: 1;
-            animation: speakPulse 1s ease-in-out infinite;
+            transform: translateX(-50%) translateY(0);
         }
-
-        /* Volume / Rate sliders */
-        .narration-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            height: 4px;
-            border-radius: 2px;
-            background: rgba(255,255,255,0.2);
-            outline: none;
-            cursor: pointer;
+        #aac-caption-bar .cap-dot {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: #1FB6AA; flex-shrink: 0;
         }
-        .narration-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: #1FB6AA;
-            cursor: pointer;
+        #aac-caption-bar.recording .cap-dot {
+            background: #EF4444;
+            animation: capPulse 0.65s ease-in-out infinite;
         }
-        .narration-slider::-moz-range-thumb {
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: #1FB6AA;
-            cursor: pointer;
-            border: none;
+        @keyframes capPulse {
+            0%,100% { transform: scale(1); opacity: 1; }
+            50%      { transform: scale(1.7); opacity: 0.4; }
         }
-
-        /* Gesture guide narration item */
-        .gesture-item.narration-active {
-            background: rgba(31,182,170,0.15);
-            border-radius: 8px;
+ 
+        /* Hold-to-speak button */
+        #aac-hold-btn {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
         }
-
-        /* Narration header button in the top bar */
-        #narration-header-btn {
-            transition: background 0.2s, transform 0.15s;
+        #aac-hold-btn.recording {
+            background: #EF4444 !important;
+            box-shadow: 0 0 0 4px rgba(239,68,68,0.3) !important;
+            transform: scale(0.97);
         }
-        #narration-header-btn:hover { transform: scale(1.04); }
+ 
+        /* Transcript entries */
+        .aac-entry { animation: entryIn 0.22s ease both; }
+        @keyframes entryIn {
+            from { opacity:0; transform:translateY(5px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+ 
+        /* Confidence bar transition */
+        #confidence-bar {
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
-
+ 
 <body data-session-id="{{ session_id }}" class="m-0 p-0 overflow-hidden font-sans antialiased bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 text-white">
+    <!-- CSRF Token -->
     {% csrf_token %}
-
+ 
+    <!-- Skip to content link for accessibility -->
     <a href="#presentation-container" class="sr-only">Skip to presentation</a>
-
+ 
     <!-- Loading Overlay -->
     <aside id="loading-overlay" role="alert" aria-live="polite" class="fixed inset-0 w-full h-full bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 flex flex-col justify-center items-center z-[2000] text-white transition-opacity duration-500">
         <div class="loader w-12 h-12 border-[5px] border-white/10 border-t-zentrol-teal-500 rounded-full animate-spin mb-5" aria-hidden="true"></div>
@@ -197,20 +239,23 @@
         <p class="mb-2">Please allow camera access when prompted</p>
         <p id="loading-status" class="text-sm opacity-75">Loading MediaPipe...</p>
     </aside>
-
-    <!-- Main Container -->
+ 
+    <!-- Main Presentation Container -->
     <main id="presentation-container" class="relative w-screen h-screen bg-gradient-to-br from-zentrol-navy-500 to-zentrol-teal-600 pt-[50px] md:pt-[50px] pl-0 md:pl-[220px] overflow-hidden">
-
-        <!-- Camera + Gesture Sidebar -->
+        
+        <!-- Camera Feed and Gesture Overlay Container -->
         <aside id="camera-container" class="fixed md:top-1/2 md:-translate-y-1/2 md:left-5 top-[75px] right-2 md:w-[200px] w-[140px] flex flex-col gap-0 rounded-lg overflow-hidden border border-zentrol-teal-500/50 bg-gradient-to-br from-zentrol-navy-500/80 to-zentrol-teal-600/80 backdrop-blur-sm z-[999] shadow-lg">
-            
-            <!-- Camera Feed -->
-            <video id="camera-feed" autoplay playsinline muted
+            <!-- Camera Feed - Top Section -->
+            <video 
+                id="camera-feed" 
+                autoplay 
+                playsinline 
+                muted
                 aria-label="Camera feed for gesture detection"
-                class="w-full md:h-[150px] h-[100px] bg-zentrol-navy-600 object-cover -scale-x-100">
-            </video>
-
-            <!-- Gesture Overlay -->
+                class="w-full md:h-[150px] h-[100px] bg-zentrol-navy-600 object-cover -scale-x-100"
+            ></video>
+ 
+            <!-- Gesture Overlay - Bottom Section -->
             <aside id="gesture-overlay" aria-live="polite" aria-atomic="true" class="w-full md:p-4 p-2 bg-zentrol-teal-700 text-white text-center">
                 <div id="gesture-icon" aria-hidden="true" class="md:text-5xl text-3xl md:my-2 my-1">👋</div>
                 <div id="gesture-name" class="md:text-sm text-xs font-semibold md:my-2 my-1 min-h-[16px] md:min-h-[20px] text-white">Waiting for gesture...</div>
@@ -218,97 +263,110 @@
                     <div id="confidence-bar" class="h-full bg-zentrol-teal-400"></div>
                 </div>
                 <div class="text-[10px] md:text-xs mt-1 md:mt-2 flex justify-around font-mono text-zentrol-gray-300">
-                    FPS: <span id="fps-counter">0</span> | <span id="latency-counter">0</span>ms
+                    FPS: <span id="fps-counter">0</span> | 
+                    <span id="latency-counter">0</span>ms
                 </div>
             </aside>
-
-            <!-- ── Narration Panel (inside sidebar) ── -->
-            <div id="narration-panel" style="max-height: 220px;">
-                <div class="p-3 flex flex-col gap-2">
-
-                    <!-- Row 1: title + speaking dot + status -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[11px] font-bold text-zentrol-teal-300 uppercase tracking-widest">Narration</span>
-                            <span id="narration-speaking-dot" role="status" aria-label="Speaking"></span>
-                        </div>
-                        <span id="narration-status-text" class="text-[10px] text-zentrol-gray-400 font-mono">On</span>
-                    </div>
-
-                    <!-- Row 2: Toggle + Replay buttons -->
-                    <div class="flex gap-1.5">
-                        <button
-                            id="narration-toggle-btn"
-                            class="narration-on flex-1 rounded-full py-1.5 text-[11px] font-bold tracking-wide transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-400"
-                            aria-pressed="true"
-                            title="Narration on — click to disable"
-                            onclick="window.narrationManager?.toggle()">
-                            🔊 Toggle
-                        </button>
-                        <button
-                            id="narration-replay-btn"
-                            class="flex-1 rounded-full py-1.5 text-[11px] font-bold tracking-wide bg-zentrol-navy-600 text-zentrol-teal-300 hover:bg-zentrol-navy-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-400"
-                            title="Replay narration for this slide"
-                            onclick="window.narrationManager?.replayCurrentSlide()">
-                            ↺ Replay
-                        </button>
-                    </div>
-
-                    <!-- Row 3: Speed slider -->
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] text-zentrol-gray-400 w-10 flex-shrink-0">Speed</span>
-                        <input
-                            id="narration-rate-slider"
-                            type="range" min="0.5" max="1.8" step="0.05" value="0.95"
-                            class="narration-slider flex-1"
-                            aria-label="Speech rate"
-                            oninput="window.narrationManager?.setRate(parseFloat(this.value)); document.getElementById('narration-rate-val').textContent = parseFloat(this.value).toFixed(2) + '×'">
-                        <span id="narration-rate-val" class="text-[10px] font-mono text-zentrol-teal-300 w-8 text-right">0.95×</span>
-                    </div>
-
-                    <!-- Row 4: Volume slider -->
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] text-zentrol-gray-400 w-10 flex-shrink-0">Vol</span>
-                        <input
-                            id="narration-vol-slider"
-                            type="range" min="0" max="1" step="0.05" value="1"
-                            class="narration-slider flex-1"
-                            aria-label="Speech volume"
-                            oninput="window.narrationManager?.setVolume(parseFloat(this.value))">
-                        <span class="text-[10px] font-mono text-zentrol-teal-300 w-8 text-right">🔊</span>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- Desktop Control Buttons -->
+ 
+            <!-- Control Buttons - Vertical Layout (Hidden on mobile, shown in bottom bar) -->
             <nav class="hidden md:flex w-full p-3 bg-white border-t border-zentrol-teal-500 flex-col gap-2" aria-label="Presentation controls">
-                <a id="change-file-btn" href="/#upload" style="display:none"
-                   class="w-full flex items-center justify-center gap-2 rounded-full bg-zentrol-navy-500 text-white px-4 py-2 text-xs font-semibold transition-all duration-300 hover:bg-zentrol-navy-400 mb-1">
-                    <span>📁</span><span>Change file</span>
-                </a>
-                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="Reveal.prev()" aria-label="Previous slide">
-                    <span class="text-lg" aria-hidden="true">◀</span><span>Previous</span>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:bg-zentrol-gray-600 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none w-full flex items-center justify-center gap-2" onclick="Reveal.prev()" aria-label="Previous slide">
+                    <span class="text-lg" aria-hidden="true">◀</span>
+                    <span>Previous</span>
                 </button>
-                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="Reveal.next()" aria-label="Next slide">
-                    <span>Next</span><span class="text-lg" aria-hidden="true">▶</span>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:bg-zentrol-gray-600 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none w-full flex items-center justify-center gap-2" onclick="Reveal.next()" aria-label="Next slide">
+                    <span>Next</span>
+                    <span class="text-lg" aria-hidden="true">▶</span>
                 </button>
-                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md w-full flex items-center justify-center gap-2" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
-                    <span class="text-lg" aria-hidden="true">⛶</span><span>Fullscreen</span>
+                <button class="control-btn bg-zentrol-teal-500 text-white border-none px-4 py-2 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 whitespace-nowrap hover:bg-zentrol-teal-400 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:bg-zentrol-gray-600 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none w-full flex items-center justify-center gap-2" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
+                    <span class="text-lg" aria-hidden="true">⛶</span>
+                    <span>Fullscreen</span>
                 </button>
             </nav>
+ 
+            <!-- ── AAC Lip-to-Speech Panel ── -->
+            <div id="aac-panel" style="border-top:1px solid rgba(31,182,170,0.15); background:rgba(11,22,34,0.7);">
+                <div class="p-3 flex flex-col gap-2">
+ 
+                    <!-- Title row -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] font-bold text-zentrol-teal-300 uppercase tracking-widest">Lip-to-Speech</span>
+                            <span id="aac-dot"
+                                  style="width:7px;height:7px;border-radius:50%;background:#6B7280;display:inline-block;flex-shrink:0;"
+                                  role="status"></span>
+                        </div>
+                        <span id="aac-status" class="text-[10px] text-zentrol-gray-400 font-mono">Off</span>
+                    </div>
+ 
+                    <!-- Enable toggle -->
+                    <button id="aac-enable-btn" onclick="toggleAAC()"
+                            class="w-full rounded-full py-1.5 text-[11px] font-bold tracking-wide
+                                   bg-zentrol-gray-700 text-zentrol-gray-400
+                                   hover:bg-zentrol-teal-700 hover:text-white
+                                   transition-all focus:outline-none focus:ring-2 focus:ring-zentrol-teal-500">
+                        🗣 Enable Lip-to-Speech
+                    </button>
+ 
+                    <!-- Hold-to-speak (shown when enabled) -->
+                    <button id="aac-hold-btn"
+                            class="hidden w-full rounded-xl py-3 text-sm font-bold
+                                   bg-zentrol-teal-600 text-white
+                                   focus:outline-none focus:ring-2 focus:ring-zentrol-teal-400">
+                        🤙 Hold to Speak
+                    </button>
+                    <p id="aac-hint" class="hidden text-[10px] text-zentrol-gray-400 text-center leading-relaxed">
+                        Mouth words while holding.<br>Release to hear them spoken aloud.
+                    </p>
+ 
+                    <!-- Buffer progress (shown when enabled) -->
+                    <div id="aac-buffer-row" class="hidden flex items-center gap-2">
+                        <span class="text-[10px] text-zentrol-gray-400 w-10 flex-shrink-0">Buffer</span>
+                        <div class="flex-1 h-1 rounded-full bg-zentrol-navy-600 overflow-hidden">
+                            <div id="aac-buffer-bar"
+                                 style="height:100%;border-radius:999px;background:#1AA096;width:0%;transition:width 0.3s ease;">
+                            </div>
+                        </div>
+                        <span id="aac-buffer-pct" class="text-[10px] font-mono text-zentrol-teal-300 w-7 text-right">0%</span>
+                    </div>
+ 
+                    <!-- Last detected word -->
+                    <div id="aac-word-row" class="hidden rounded-lg px-3 py-2 text-center"
+                         style="background:rgba(15,30,46,0.7);">
+                        <p class="text-[10px] text-zentrol-gray-400 mb-0.5">Detected</p>
+                        <p id="aac-word" class="text-sm font-mono font-bold text-zentrol-teal-300">—</p>
+                    </div>
+ 
+                    <!-- Transcript -->
+                    <div id="aac-transcript-section" class="hidden flex flex-col gap-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-zentrol-gray-400 uppercase tracking-widest">Transcript</span>
+                            <button onclick="aacClearTranscript()"
+                                    class="text-[10px] text-zentrol-gray-500 hover:text-red-400 underline underline-offset-2">
+                                Clear
+                            </button>
+                        </div>
+                        <div id="aac-transcript"
+                             class="max-h-[110px] overflow-y-auto flex flex-col gap-1"
+                             aria-live="polite" aria-label="Lip-to-speech transcript">
+                        </div>
+                    </div>
+ 
+                </div>
+            </div>
+ 
         </aside>
-
-        <!-- Header Bar -->
+ 
+        <!-- Header Bar with Logo, Gesture Controls, and Action Buttons -->
         <header class="gesture-guide fixed top-0 left-0 right-0 bg-white text-zentrol-navy-500 py-2 md:py-2.5 px-3 md:px-5 border-b-2 border-zentrol-gray-200 z-[1000] shadow-md flex items-center gap-2 md:gap-4" aria-label="Presentation header">
-            <!-- Logo -->
+            <!-- Logo on the left -->
             <div class="flex items-center gap-2 md:gap-3 flex-shrink-0 hover:bg-zentrol-navy-500/20 transition-colors duration-300 cursor-pointer ring-2 ring-zentrol-gray-500/20 rounded-md p-1.5 md:p-2" title="Zentrol">
                 <a href="/" target="_self" rel="noopener noreferrer" title="Zentrol">
                     <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol Logo" class="h-6 md:h-8 w-auto">
                 </a>
             </div>
-
-            <!-- Gesture Controls -->
+            
+            <!-- Gesture Controls centered -->
             <nav class="hidden md:flex items-center gap-3 flex-1 justify-center flex-wrap min-w-0" aria-label="Gesture controls">
                 <h2 class="m-0 text-sm font-semibold text-zentrol-navy-600 pr-3 border-r border-zentrol-gray-300 hidden lg:block">Controls</h2>
                 <ul class="flex items-center gap-0 list-none m-0 p-0" role="list">
@@ -332,79 +390,98 @@
                         <span class="gesture-emoji text-xl mr-2 text-center" aria-hidden="true">☝️</span>
                         <span class="gesture-action text-[13px] font-medium text-zentrol-navy-700 hidden md:inline">Reset</span>
                     </li>
-                    <!-- Narration gesture item in header -->
-                    <li class="gesture-item flex items-center m-0 px-3 py-1.5 rounded-md transition-all duration-300 whitespace-nowrap hover:bg-zentrol-gray-100 border-l border-zentrol-gray-200 ml-2 pl-4">
-                        <span class="gesture-emoji text-xl mr-2 text-center" aria-hidden="true">👌</span>
-                        <span class="gesture-action text-[13px] font-medium text-zentrol-navy-700 hidden md:inline">Narration</span>
-                    </li>
                 </ul>
             </nav>
-
-            <!-- Narration quick-toggle in header (visible on all screen sizes) -->
-            <button
-                id="narration-header-btn"
-                class="flex-shrink-0 flex items-center gap-1.5 bg-zentrol-teal-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow hover:bg-zentrol-teal-400 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300"
-                title="Toggle slide narration"
-                aria-label="Toggle narration"
-                onclick="window.narrationManager?.toggle(); this.classList.toggle('bg-zentrol-gray-400'); this.classList.toggle('bg-zentrol-teal-500');">
-                🔊 <span class="hidden sm:inline">Narration</span>
-            </button>
+ 
         </header>
-
-        <!-- Mobile Bottom Bar -->
+        
+        <!-- Mobile Controls - Bottom Fixed Bar -->
         <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-zentrol-gray-200 z-[1000] shadow-lg">
             <div class="flex items-center justify-around px-4 py-3 gap-2">
                 <button class="flex-1 bg-zentrol-teal-500 text-white border-none px-3 py-2.5 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 active:bg-zentrol-teal-600" onclick="Reveal.prev()" aria-label="Previous slide">
-                    <span class="text-base" aria-hidden="true">◀</span><span>Prev</span>
+                    <span class="text-base" aria-hidden="true">◀</span>
+                    <span>Previous</span>
                 </button>
                 <button class="flex-1 bg-zentrol-teal-500 text-white border-none px-3 py-2.5 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 active:bg-zentrol-teal-600" onclick="Reveal.next()" aria-label="Next slide">
-                    <span>Next</span><span class="text-base" aria-hidden="true">▶</span>
+                    <span>Next</span>
+                    <span class="text-base" aria-hidden="true">▶</span>
                 </button>
                 <button class="flex-1 bg-zentrol-teal-500 text-white border-none px-3 py-2.5 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 active:bg-zentrol-teal-600" onclick="presentationController.toggleFullscreenDirect()" aria-label="Toggle fullscreen">
-                    <span class="text-base" aria-hidden="true">⛶</span><span>FS</span>
-                </button>
-                <!-- Mobile narration toggle -->
-                <button
-                    class="flex-1 bg-zentrol-teal-600 text-white border-none px-3 py-2.5 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 active:bg-zentrol-teal-700"
-                    onclick="window.narrationManager?.toggle()"
-                    aria-label="Toggle narration">
-                    🔊
+                    <span class="text-base" aria-hidden="true">⛶</span>
+                    <span>Fullscreen</span>
                 </button>
             </div>
         </nav>
-
-        <!-- Reveal.js Slides -->
+ 
+        <!-- Reveal.js Presentation Container -->
         <div class="reveal" role="region" aria-label="Presentation slides">
             <div class="slides">
-                <section><img id="slide-image" src="{% static 'media/slides/1.png' %}" alt="Gesture Controlled Presentation - Slide 1"></section>
-                <section><img src="{% static 'media/slides/2.png' %}" alt="Gesture Controlled Presentation - Slide 2"></section>
-                <section><img src="{% static 'media/slides/3.png' %}" alt="Gesture Controlled Presentation - Slide 3"></section>
-                <section><img src="{% static 'media/slides/4.png' %}" alt="Gesture Controlled Presentation - Slide 4"></section>
-                <section><img src="{% static 'media/slides/5.png' %}" alt="Gesture Controlled Presentation - Slide 5"></section>
-                <section><img src="{% static 'media/slides/6.png' %}" alt="Gesture Controlled Presentation - Slide 6"></section>
-                <section><img src="{% static 'media/slides/7.png' %}" alt="Gesture Controlled Presentation - Slide 7"></section>
-                <section><img src="{% static 'media/slides/8.png' %}" alt="Gesture Controlled Presentation - Slide 8"></section>
-                <section><img src="{% static 'media/slides/9.png' %}" alt="Gesture Controlled Presentation - Slide 9"></section>
-                <section><img src="{% static 'media/slides/10.png' %}" alt="Gesture Controlled Presentation - Slide 10"></section>
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/1.png' %}" alt="Gesture Controlled Presentation - Slide 1">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/2.png' %}" alt="Gesture Controlled Presentation - Slide 2">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/3.png' %}" alt="Gesture Controlled Presentation - Slide 3">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/4.png' %}" alt="Gesture Controlled Presentation - Slide 4">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/5.png' %}" alt="Gesture Controlled Presentation - Slide 5">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/6.png' %}" alt="Gesture Controlled Presentation - Slide 6">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/7.png' %}" alt="Gesture Controlled Presentation - Slide 7">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/8.png' %}" alt="Gesture Controlled Presentation - Slide 8">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/9.png' %}" alt="Gesture Controlled Presentation - Slide 9">
+                </section>
+ 
+                <section>
+                    <img id="slide-image" src="{% static 'media/slides/10.png' %}" alt="Gesture Controlled Presentation - Slide 10">
+                </section>
             </div>
         </div>
-
+ 
+    <!-- AAC floating caption bar -->
+    <div id="aac-caption-bar" role="status" aria-live="polite">
+        <span class="cap-dot"></span>
+        <span id="aac-caption-text">🤙 Hold button to speak</span>
+    </div>
+ 
     </main>
-
-    <!-- JS Libraries -->
+ 
+    <!-- JavaScript Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+ 
+    <!-- MediaPipe Dependencies -->
     <script src="{% static 'mediapipe/hands.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
-    <!-- Custom Scripts (load order matters) -->
+ 
+    <!-- Custom Scripts -->
     <script src="{% static 'js/gesture_engine.js' %}"></script>
-    <script src="{% static 'js/narration.js' %}"></script>
     <script src="{% static 'js/presentation.js' %}"></script>
-
+    <script src="{% static 'js/lipread_engine.js' %}"></script>
+ 
     <!-- Main Application Script -->
     <script>
         'use strict';
-
+ 
         // ================================================================
         // Initialize Reveal.js
         // ================================================================
@@ -421,239 +498,359 @@
             margin: 0,
             minScale: 1,
             maxScale: 1,
+            
+            // Accessibility
             keyboardCondition: 'focused',
+            
+            // Performance
             viewDistance: 3,
             mobileViewDistance: 2
         });
-
-        // ================================================================
-        // Load slides from sessionStorage (set by home.html upload)
-        // Falls back to static slides gracefully
-        // ================================================================
-        let uploadedSlides = [];
-
-        function loadUploadedSlides() {
-            try {
-                const raw = sessionStorage.getItem('zentrol_slides');
-                if (!raw) return false;
-                uploadedSlides = JSON.parse(raw);
-                if (!Array.isArray(uploadedSlides) || uploadedSlides.length === 0) return false;
-                console.log(`📂 Loaded ${uploadedSlides.length} uploaded slides from session`);
-                return true;
-            } catch (e) {
-                console.warn('Could not load uploaded slides:', e);
-                return false;
-            }
-        }
-
-        function injectUploadedSlides(slides) {
-            const slidesContainer = document.querySelector('.reveal .slides');
-            if (!slidesContainer) return;
-
-            // Clear existing static slides
-            slidesContainer.innerHTML = '';
-
-            slides.forEach((slide, i) => {
-                const section = document.createElement('section');
-
-                if (slide.imageUrl) {
-                    const img = document.createElement('img');
-                    img.src = slide.imageUrl;
-                    img.alt = slide.text
-                        ? slide.text.substring(0, 120)
-                        : `Slide ${i + 1}`;
-                    img.style.maxWidth = 'calc(100% - 40px)';
-                    img.style.maxHeight = 'calc(100% - 40px)';
-                    img.style.objectFit = 'contain';
-                    img.style.borderRadius = '12px';
-                    img.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)';
-                    section.appendChild(img);
-                } else {
-                    // Text-only fallback slide
-                    section.style.cssText = `
-                        background: #fff; padding: 40px; border-radius: 16px;
-                        text-align: left; color: #0F1E2E;
-                        max-width: calc(100% - 80px); max-height: calc(100% - 80px);
-                        overflow: hidden;
-                    `;
-                    const slideNum = document.createElement('p');
-                    slideNum.textContent = `Slide ${i + 1}`;
-                    slideNum.style.cssText = 'font-size:12px; color:#9CA3AF; margin-bottom:16px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;';
-                    section.appendChild(slideNum);
-
-                    const content = document.createElement('p');
-                    content.textContent = slide.text || '(No text on this slide)';
-                    content.style.cssText = 'font-size:18px; line-height:1.7; color:#1F2933;';
-                    section.appendChild(content);
-                }
-
-                slidesContainer.appendChild(section);
-            });
-
-            // Sync Reveal after DOM update
-            setTimeout(() => {
-                Reveal.sync();
-                Reveal.slide(0);
-            }, 100);
-        }
-
-        // Inject uploaded slides as narration scripts into NarrationManager
-        function patchNarrationScripts(slides) {
-            slides.forEach((slide, i) => {
-                // Priority: real slide text → speaker notes → nothing
-                const text = (slide.text && slide.text.trim())
-                    ? slide.text.trim()
-                    : (slide.notes && slide.notes.trim())
-                        ? slide.notes.trim()
-                        : null;
-
-                if (text) {
-                    window.narrationManager.setSlideScript(i, text);
-                }
-            });
-            console.log('✅ Narration scripts patched with real slide text');
-        }
-
-        // Show/hide "change file" button based on whether slides are loaded
-        function updateChangeFileBtn(hasFile) {
-            const btn = document.getElementById('change-file-btn');
-            if (btn) btn.style.display = hasFile ? 'flex' : 'none';
-        }
-
-        // ================================================================
-        // Initialize Narration Manager
-        // ================================================================
-        window.narrationManager = new NarrationManager({
-            rate: 0.95,
-            pitch: 1.0,
-            volume: 1.0,
-            autoNarrate: true,
-            debug: false
-        });
-
-        // Wire up speaking dot animation
-        window.narrationManager.onSpeakStart = () => {
-            const dot = document.getElementById('narration-speaking-dot');
-            if (dot) dot.classList.add('active');
-        };
-        window.narrationManager.onSpeakEnd = () => {
-            const dot = document.getElementById('narration-speaking-dot');
-            if (dot) dot.classList.remove('active');
-        };
-
-        // Hook into Reveal.js slide changes
-        Reveal.addEventListener('slidechanged', (event) => {
-            window.narrationManager.narrateSlide(event.indexh);
-        });
-
-        // After Reveal is ready: inject slides + patch narration
-        Reveal.addEventListener('ready', () => {
-            const hasUploaded = loadUploadedSlides();
-
-            if (hasUploaded) {
-                injectUploadedSlides(uploadedSlides);
-                patchNarrationScripts(uploadedSlides);
-                updateChangeFileBtn(true);
-                console.log('✅ Presentation running from uploaded PPTX');
-            } else {
-                updateChangeFileBtn(false);
-                console.log('ℹ️ No uploaded file — using static slides + default scripts');
-            }
-
-            // Narrate first slide after a short settle delay
-            setTimeout(() => {
-                window.narrationManager.narrateSlide(0);
-            }, 1400);
-        });
-
-        // ================================================================
-        // ok gesture → toggle narration  (reassigned from duplicate reset)
-        // ================================================================
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.GESTURE_ACTION_MAP) {
-                GESTURE_ACTION_MAP['ok'] = 'toggleNarration';
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.PresentationController) {
-                PresentationController.prototype.toggleNarration = function() {
-                    const enabled = window.narrationManager?.toggle();
-                    console.log(`🔊 Narration ${enabled ? 'enabled' : 'disabled'} via gesture`);
-                };
-            }
-        });
-
+ 
         // ================================================================
         // Initialize Gesture Engine
         // ================================================================
         const videoElement = document.getElementById('camera-feed');
         const gestureEngine = new GestureEngine({
-            profile: 'balanced',
-            debug: false
+            profile: 'balanced',  // Options: 'responsive', 'balanced', 'high-accuracy'
+            debug: false          // Set to true for development
         });
-
+ 
         async function initializeGestureControl() {
             console.log('🎬 Starting gesture control initialization...');
+ 
             try {
                 const success = await gestureEngine.start(videoElement);
+ 
                 if (success) {
                     console.log('✅ Gesture control initialized successfully');
                     startPerformanceMonitoring();
                 } else {
                     throw new Error('Gesture engine failed to start');
                 }
+ 
             } catch (error) {
                 console.error('❌ Initialization failed:', error);
+                
                 const statusEl = document.getElementById('loading-status');
                 if (statusEl) {
                     statusEl.innerHTML = `
                         <span class="text-red-400">
                             ⚠️ Failed to initialize gesture control<br>
                             <small>${error.message}</small>
-                        </span>`;
+                        </span>
+                    `;
                 }
+ 
+                // Hide overlay after delay
                 setTimeout(() => {
                     const overlay = document.getElementById('loading-overlay');
-                    if (overlay) overlay.style.display = 'none';
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
                 }, 3000);
             }
         }
-
+ 
         // ================================================================
-        // Performance Monitoring
+        // Performance Monitoring (FIXED)
         // ================================================================
         function startPerformanceMonitoring() {
             setInterval(() => {
-                if (!gestureEngine?.metrics) return;
+                // Safe access with null checks
+                if (!gestureEngine || !gestureEngine.metrics) return;
+                
                 const metrics = gestureEngine.metrics.getMetrics();
+                
                 const fpsEl = document.getElementById('fps-counter');
                 const latencyEl = document.getElementById('latency-counter');
+                
                 if (fpsEl) fpsEl.textContent = Math.round(metrics.fps);
                 if (latencyEl) latencyEl.textContent = Math.round(metrics.avgDetectionTime);
             }, 1000);
         }
-
+ 
+ 
         // ================================================================
-        // Cleanup
+        // AAC — Lip-to-Speech for presenters with mutism
+        // ================================================================
+ 
+        let _aacEngine    = null;
+        let _aacEnabled   = false;
+        let _aacRecording = false;
+        let _aacTimer     = null;
+        let _aacLog       = [];
+ 
+        // ── Enable / disable ─────────────────────────────────────────
+        function toggleAAC() {
+            _aacEnabled ? _disableAAC() : _enableAAC();
+        }
+ 
+        function _enableAAC() {
+            _aacEnabled = true;
+ 
+            _aacEngine = new LipReadEngine({
+                wsUrl:      'ws://' + location.host + '/ws/lipread/',
+                targetFPS:  25,
+                debug:      false,
+                onPrediction: (word, conf) => {
+                    // Clear the fallback timer — we got a result
+                    clearTimeout(_aacTimer);
+ 
+                    // Update word display
+                    const el = document.getElementById('aac-word');
+                    if (el) el.textContent = word + ' (' + Math.round(conf * 100) + '%)';
+ 
+                    // Re-enable button
+                    const btn = document.getElementById('aac-hold-btn');
+                    if (btn) { btn.disabled = false; btn.textContent = '🤙 Hold to Speak'; }
+                    document.getElementById('aac-dot').style.background = '#1FB6AA';
+                    document.getElementById('aac-status').textContent = 'Ready';
+ 
+                    // Speak it
+                    if (word && word.trim()) {
+                        _speakWord(word.trim());
+                    } else {
+                        _showCaption('(nothing detected — try again)', false);
+                        setTimeout(_hideCaption, 2500);
+                    }
+                },
+                onStatus: (status, msg) => {
+                    const s = document.getElementById('aac-status');
+                    if (s) s.textContent = msg;
+                    if (status === 'buffering' && _aacEngine) {
+                        const pct = _aacEngine.bufferPct;
+                        const bar = document.getElementById('aac-buffer-bar');
+                        const lbl = document.getElementById('aac-buffer-pct');
+                        if (bar) bar.style.width = pct + '%';
+                        if (lbl) lbl.textContent = pct + '%';
+                    }
+                }
+            });
+ 
+            _aacEngine.start(videoElement);
+ 
+            // Show UI elements
+            document.getElementById('aac-enable-btn').textContent = '🗣 Lip-to-Speech On';
+            document.getElementById('aac-enable-btn').classList.add('bg-zentrol-teal-600','text-white');
+            document.getElementById('aac-enable-btn').classList.remove('bg-zentrol-gray-700','text-zentrol-gray-400');
+            document.getElementById('aac-hold-btn').classList.remove('hidden');
+            document.getElementById('aac-hint').classList.remove('hidden');
+            document.getElementById('aac-buffer-row').classList.remove('hidden');
+            document.getElementById('aac-word-row').classList.remove('hidden');
+            document.getElementById('aac-transcript-section').classList.remove('hidden');
+            document.getElementById('aac-dot').style.background = '#1FB6AA';
+ 
+            _showCaption('Ready — hold button or 🤙 gesture to speak', false);
+            setTimeout(_hideCaption, 3000);
+        }
+ 
+        function _disableAAC() {
+            _aacEnabled = _aacRecording = false;
+            _aacEngine && _aacEngine.stop();
+            _aacEngine = null;
+ 
+            document.getElementById('aac-enable-btn').textContent = '🗣 Enable Lip-to-Speech';
+            document.getElementById('aac-enable-btn').classList.remove('bg-zentrol-teal-600','text-white');
+            document.getElementById('aac-enable-btn').classList.add('bg-zentrol-gray-700','text-zentrol-gray-400');
+            ['aac-hold-btn','aac-hint','aac-buffer-row','aac-word-row','aac-transcript-section']
+                .forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            document.getElementById('aac-dot').style.background = '#6B7280';
+            document.getElementById('aac-status').textContent = 'Off';
+            _hideCaption();
+        }
+ 
+        // ── Hold-to-speak ─────────────────────────────────────────────
+        function _startRecording() {
+            if (!_aacEnabled || _aacRecording) return;
+            _aacRecording = true;
+            clearTimeout(_aacTimer);
+ 
+            // Tell engine to start accepting frames
+            _aacEngine && _aacEngine.startRecording();
+ 
+            const btn = document.getElementById('aac-hold-btn');
+            if (btn) { btn.classList.add('recording'); btn.textContent = '🔴 Recording…'; }
+            document.getElementById('aac-dot').style.background = '#EF4444';
+            document.getElementById('aac-status').textContent = 'Recording';
+            // Reset buffer progress bar
+            const bar = document.getElementById('aac-buffer-bar');
+            const lbl = document.getElementById('aac-buffer-pct');
+            if (bar) bar.style.width = '0%';
+            if (lbl) lbl.textContent = '0%';
+ 
+            _showCaption('🔴 Mouth your words now…', true);
+        }
+ 
+        function _stopRecording() {
+            if (!_aacEnabled || !_aacRecording) return;
+            _aacRecording = false;
+ 
+            const btn = document.getElementById('aac-hold-btn');
+            if (btn) { btn.classList.remove('recording'); btn.textContent = '⏳ Processing…'; btn.disabled = true; }
+            document.getElementById('aac-dot').style.background = '#F59E0B';
+            document.getElementById('aac-status').textContent = 'Processing…';
+            _showCaption('⏳ Reading lips…', false);
+ 
+            // Tell engine to stop frames and trigger server inference
+            _aacEngine && _aacEngine.stopRecording();
+ 
+            // Result will come back via onPrediction callback (set up in _enableAAC)
+            // Set a timeout fallback in case nothing comes back
+            _aacTimer = setTimeout(() => {
+                if (!_aacRecording) {  // still waiting
+                    btn.disabled = false;
+                    btn.textContent = '🤙 Hold to Speak';
+                    document.getElementById('aac-dot').style.background = '#1FB6AA';
+                    document.getElementById('aac-status').textContent = 'Ready';
+                    _showCaption('(nothing detected — try again)', false);
+                    setTimeout(_hideCaption, 2500);
+                }
+            }, 500); // short delay to catch last frames
+        }
+ 
+        // ── Bind hold button ──────────────────────────────────────────
+        (function() {
+            const btn = document.getElementById('aac-hold-btn');
+            if (!btn) return;
+            btn.addEventListener('mousedown',  e => { e.preventDefault(); _startRecording(); });
+            btn.addEventListener('mouseup',    e => { e.preventDefault(); _stopRecording(); });
+            btn.addEventListener('mouseleave', () => { if (_aacRecording) _stopRecording(); });
+            btn.addEventListener('touchstart', e => { e.preventDefault(); _startRecording(); }, { passive: false });
+            btn.addEventListener('touchend',   e => { e.preventDefault(); _stopRecording(); },  { passive: false });
+        })();
+ 
+        // ── Gesture: 🤙 call gesture activates recording ──────────────
+        document.addEventListener('gestureDetected', e => {
+            if (!_aacEnabled) return;
+            const g = e.detail && e.detail.gesture;
+            if (g === 'call' && !_aacRecording) _startRecording();
+            else if (g && g !== 'call' && _aacRecording) _stopRecording();
+        });
+ 
+        // ── TTS + caption + transcript ────────────────────────────────
+        function _speakWord(text) {
+            text = text.trim();
+            if (!text) return;
+ 
+            // Show caption
+            _showCaption('\uD83D\uDDE3\uFE0F ' + text, false);
+            setTimeout(_hideCaption, 4000);
+ 
+            // Speak via Web Speech API
+            const utt = new SpeechSynthesisUtterance(text);
+            utt.rate = 0.95; utt.volume = 1.0; utt.lang = 'en-US';
+ 
+            const voices = speechSynthesis.getVoices();
+            const pick = ['Google US English','Microsoft Aria','Samantha','Karen','Daniel'];
+            for (const name of pick) {
+                const v = voices.find(v => v.name.includes(name));
+                if (v) { utt.voice = v; break; }
+            }
+            speechSynthesis.speak(utt);
+ 
+            // Save to transcript
+            _addEntry(text);
+        }
+ 
+        function _showCaption(text, recording) {
+            const bar = document.getElementById('aac-caption-bar');
+            const txt = document.getElementById('aac-caption-text');
+            if (!bar || !txt) return;
+            txt.textContent = text;
+            bar.classList.toggle('recording', recording);
+            bar.classList.add('visible');
+        }
+ 
+        function _hideCaption() {
+            document.getElementById('aac-caption-bar')?.classList.remove('visible');
+        }
+ 
+        function _addEntry(text) {
+            const now  = new Date();
+            const time = now.getHours().toString().padStart(2,'0') + ':' +
+                         now.getMinutes().toString().padStart(2,'0');
+            _aacLog.push({ time, text, slide: Reveal.getIndices().h });
+ 
+            const container = document.getElementById('aac-transcript');
+            if (!container) return;
+ 
+            const el = document.createElement('div');
+            el.className = 'aac-entry';
+            el.style.cssText = 'display:flex;gap:6px;align-items:flex-start;';
+            el.innerHTML =
+                '<span style="font-size:9px;color:#6B7280;font-family:monospace;flex-shrink:0;padding-top:2px;">' + time + '</span>' +
+                '<span style="font-size:11px;color:#E5E7EB;line-height:1.4;">' + _esc(text) + '</span>';
+            container.appendChild(el);
+            container.scrollTop = container.scrollHeight;
+ 
+            try {
+                sessionStorage.setItem('zentrol_aac_log', JSON.stringify(_aacLog));
+            } catch (_) {}
+        }
+ 
+        function aacClearTranscript() {
+            _aacLog = [];
+            const c = document.getElementById('aac-transcript');
+            if (c) c.innerHTML = '';
+            sessionStorage.removeItem('zentrol_aac_log');
+        }
+ 
+        function _esc(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+ 
+        // Restore transcript from sessionStorage on page load
+        (function() {
+            try {
+                const saved = sessionStorage.getItem('zentrol_aac_log');
+                if (!saved) return;
+                _aacLog = JSON.parse(saved);
+                const container = document.getElementById('aac-transcript');
+                if (!container) return;
+                _aacLog.forEach(e => {
+                    const el = document.createElement('div');
+                    el.className = 'aac-entry';
+                    el.style.cssText = 'display:flex;gap:6px;align-items:flex-start;';
+                    el.innerHTML =
+                        '<span style="font-size:9px;color:#6B7280;font-family:monospace;flex-shrink:0;padding-top:2px;">' + e.time + '</span>' +
+                        '<span style="font-size:11px;color:#9CA3AF;line-height:1.4;font-style:italic;">' + _esc(e.text) + '</span>';
+                    container.appendChild(el);
+                });
+            } catch (_) {}
+        })();
+ 
+        // ================================================================
+        // Cleanup on Page Unload
         // ================================================================
         window.addEventListener('beforeunload', () => {
-            window.narrationManager?.stop();
-            gestureEngine?.stop();
+            gestureEngine && gestureEngine.stop();
+            _aacEngine    && _aacEngine.stop();
         });
-
+ 
+        // ================================================================
+        // Start Application
+        // ================================================================
         window.addEventListener('load', () => {
             initializeGestureControl();
         });
-
+ 
+        // ================================================================
+        // Error Recovery
+        // ================================================================
         window.addEventListener('error', (event) => {
             console.error('Global error:', event.error);
+            
+            // Prevent complete failure
             event.preventDefault();
         });
-
+ 
+        // ================================================================
+        // Keyboard Shortcuts Info (CORRECTED)
+        // ================================================================
         console.log(`
 ╔════════════════════════════════════════════════════════╗
-║  ZENTROL – GESTURE-CONTROLLED PRESENTATION             ║
+║  GESTURE-CONTROLLED PRESENTATION                       ║
 ╠════════════════════════════════════════════════════════╣
 ║  Gestures:                                             ║
 ║    👍 Thumbs Up     → Previous Slide                  ║
@@ -661,18 +858,16 @@
 ║    🖐️ Open Palm     → Toggle Fullscreen               ║
 ║    ✊ Fist          → Exit Fullscreen                 ║
 ║    ☝️ Point Up      → Reset to First Slide            ║
-║    👌 OK Sign       → Toggle Narration  ← NEW         ║
 ║                                                        ║
-║  Narration:                                            ║
-║    • Auto-reads each slide on change                  ║
-║    • Speed & volume sliders in sidebar                ║
-║    • Replay button for current slide                  ║
-║    • Edit SLIDE_SCRIPTS in narration.js to customize  ║
+║  Keyboard Shortcuts:                                   ║
+║    Ctrl/Cmd + F     → Toggle Fullscreen               ║
+║    Ctrl/Cmd + R     → Reset Presentation              ║
+║    Arrow Keys       → Navigate Slides                 ║
 ╚════════════════════════════════════════════════════════╝
         `);
     </script>
-
-    <!-- Structured Data -->
+ 
+    <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -681,7 +876,11 @@
         "description": "Interactive presentation system controlled by hand gestures using MediaPipe and AI",
         "applicationCategory": "Presentation Software",
         "operatingSystem": "Web Browser",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
     }
     </script>
 </body>
