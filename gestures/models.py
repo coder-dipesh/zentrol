@@ -1,6 +1,25 @@
-from django.db import models
+from pathlib import Path
+
 from django.contrib.auth.models import User
+from django.db import models
 import uuid
+
+
+def _user_avatar_upload_to(instance, filename: str) -> str:
+    ext = Path(filename).suffix.lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.webp', '.gif'):
+        ext = '.jpg'
+    return f'avatars/{instance.user_id}/{uuid.uuid4().hex}{ext}'
+
+
+class UserProfile(models.Model):
+    """Extended profile data for dashboard users (e.g. avatar)."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    avatar = models.ImageField(upload_to=_user_avatar_upload_to, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Profile({self.user_id})'
 
 class GestureLog(models.Model):
     """Log of all gesture detections for analytics"""
@@ -113,12 +132,14 @@ class PresentationAsset(models.Model):
     is_favorite = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_opened_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-updated_at']
         indexes = [
             models.Index(fields=['user', 'updated_at']),
             models.Index(fields=['user', 'is_favorite']),
+            models.Index(fields=['user', 'last_opened_at'], name='gest_pr_usr_last_open_idx'),
         ]
 
     def __str__(self):

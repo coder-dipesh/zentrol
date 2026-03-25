@@ -30,5 +30,52 @@
       </div>
     </section>
   </main>
+<script>
+  (function () {
+    const eyeOn =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5" aria-hidden="true">' +
+      '<path d="M1.5 12s4.5-7.5 10.5-7.5S22.5 12 22.5 12s-4.5 7.5-10.5 7.5S1.5 12 1.5 12Z" />' +
+      '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />' +
+      '</svg>';
+    const eyeOff =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5" aria-hidden="true">' +
+      '<path d="M1.5 12s4.5-7.5 10.5-7.5S22.5 12 22.5 12s-4.5 7.5-10.5 7.5S1.5 12 1.5 12Z" />' +
+      '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />' +
+      '<path d="M3 3l18 18" />' +
+      '</svg>';
+
+    document.querySelectorAll('input[type="password"]').forEach(function (input) {
+      if (!input || input.dataset.pwToggleInit === '1') return;
+      input.dataset.pwToggleInit = '1';
+
+      const wrapper = input.parentElement;
+      if (!wrapper) return;
+      wrapper.style.position = 'relative';
+
+      input.classList.add('pr-10');
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className =
+        'absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none';
+      btn.innerHTML = eyeOn;
+      btn.setAttribute('aria-label', 'Show password');
+
+      function syncIcon() {
+        const showing = input.type === 'text';
+        btn.innerHTML = showing ? eyeOff : eyeOn;
+        btn.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+      }
+
+      btn.addEventListener('click', function () {
+        input.type = input.type === 'password' ? 'text' : 'password';
+        syncIcon();
+      });
+
+      wrapper.appendChild(btn);
+      syncIcon();
+    });
+  })();
+</script>
 </body>
 </html>

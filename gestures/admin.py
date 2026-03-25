@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import GestureLog, PresentationSession, SystemPerformance
+from .models import GestureLog, PresentationSession, SystemPerformance, UserProfile
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'updated_at']
+    search_fields = ['user__username', 'user__email']
+    raw_id_fields = ['user']
 
 @admin.register(GestureLog)
 class GestureLogAdmin(admin.ModelAdmin):
