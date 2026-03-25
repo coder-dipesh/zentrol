@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'gestures',
-    'analytics',
+    # 'analytics',
 ]
 
 MIDDLEWARE = [
