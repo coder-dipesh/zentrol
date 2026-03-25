@@ -9,7 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('gestures.api_v1_urls')),
     path('api/', include('gestures.urls')),
-    path('analytics/', include('analytics.urls')),
+    # path('analytics/', include('analytics.urls')),
     path('', include('gestures.urls')),  # Main app URLs
 ]
 

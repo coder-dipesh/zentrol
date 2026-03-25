@@ -151,6 +151,65 @@
             transform: translateY(0);
         }
         /* Shell gradient (matches ref layout if Tailwind classes are bypassed) */
+
+        /* ================================================================
+           AAC Speak — matches Control Hub glass aesthetic
+           ================================================================ */
+        .aac-phrase-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.85);
+            background: rgba(255,255,255,0.06);
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+            white-space: nowrap;
+            line-height: 1.4;
+        }
+        .aac-phrase-btn:hover {
+            background: rgba(31,182,170,0.2);
+            border-color: rgba(31,182,170,0.5);
+            color: #fff;
+        }
+        .aac-phrase-btn:active { transform: scale(0.95); }
+        .aac-phrase-selected {
+            background: #1FB6AA !important;
+            border-color: #1FB6AA !important;
+            color: #fff !important;
+            box-shadow: 0 0 0 3px rgba(31,182,170,0.25);
+        }
+        #aac-caption-bar {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(8px);
+            z-index: 5000;
+            max-width: 80vw;
+            background: rgba(10,18,28,0.95);
+            border: 1px solid rgba(31,182,170,0.4);
+            border-radius: 999px;
+            padding: 10px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #aac-caption-bar.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        #aac-mouth-ratio { font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.4); }
+        #aac-mouth-ratio.open { color: #2dd4bf; }
+
         .zentrol-shell-bg {
             background: linear-gradient(to bottom right, #0f766e, #0ea5a4, #06b6d4);
         }
@@ -359,9 +418,10 @@
             <!-- Header + quick nav (scroll within panel) -->
             <div class="shrink-0 border-b border-white/10 px-4 py-4">
                 <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60">Control Hub</p>
-                <div class="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/5 p-1" role="tablist" aria-label="Control hub tabs">
-                    <button type="button" data-hub-tab="camera_controls" class="hub-tab-btn rounded-xl bg-white px-2 py-2 text-[11px] font-semibold text-slate-900 shadow-sm transition">Camera &amp; Control</button>
+                <div class="mt-3 grid grid-cols-3 gap-1.5 rounded-2xl bg-white/5 p-1" role="tablist" aria-label="Control hub tabs">
+                    <button type="button" data-hub-tab="camera_controls" class="hub-tab-btn rounded-xl bg-white px-2 py-2 text-[11px] font-semibold text-slate-900 shadow-sm transition">Camera</button>
                     <button type="button" data-hub-tab="narration" class="hub-tab-btn rounded-xl px-2 py-2 text-[11px] font-medium text-white/70 transition hover:bg-white/5">Narration</button>
+                    <button type="button" data-hub-tab="aac" class="hub-tab-btn rounded-xl px-2 py-2 text-[11px] font-medium text-white/70 transition hover:bg-white/5">🗣 AAC</button>
                 </div>
             </div>
 
@@ -550,6 +610,61 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- ── AAC Speak tab panel ── -->
+                <section id="hub-tab-aac" class="hub-tab-panel hidden is-enter scroll-mt-2 space-y-3">
+
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">AAC Speak</h3>
+                        <span id="aac-mouth-ratio" role="status"></span>
+                    </div>
+
+                    <!-- Category tabs -->
+                    <div id="aac-cat-tabs" class="flex flex-wrap gap-1.5" role="tablist"></div>
+
+                    <!-- Phrase grid -->
+                    <div id="aac-phrase-grid" class="flex flex-wrap gap-1.5 min-h-[60px]" role="listbox"></div>
+
+                    <!-- Type anything -->
+                    <div class="rounded-xl border border-white/10 bg-black/20 p-3 space-y-2">
+                        <p class="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/50">Type anything</p>
+                        <div class="flex gap-2">
+                            <input id="aac-type-input" type="text" placeholder="Type to speak…"
+                                   autocomplete="off" spellcheck="true"
+                                   class="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/8 px-3 py-2 text-xs text-white placeholder-white/30 outline-none focus:border-zentrol-teal-500/60 transition"
+                                   onkeydown="if(event.key==='Enter'){event.preventDefault();aacSpeakTyped();}">
+                            <button type="button" onclick="aacSpeakTyped()"
+                                    class="shrink-0 rounded-xl bg-zentrol-teal-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-zentrol-teal-500 active:scale-95">
+                                Speak
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Save custom phrase -->
+                    <div class="flex gap-2">
+                        <input id="aac-custom-input" type="text" placeholder="+ Save a custom phrase…"
+                               autocomplete="off"
+                               class="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/70 placeholder-white/25 outline-none focus:border-zentrol-teal-500/40 transition"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();aacAddCustom();}">
+                        <button type="button" onclick="aacAddCustom()"
+                                class="shrink-0 rounded-xl border border-zentrol-teal-500/40 px-3 py-2 text-[11px] font-semibold text-zentrol-teal-300 transition hover:bg-zentrol-teal-500/15 active:scale-95">
+                            Add
+                        </button>
+                    </div>
+
+                    <!-- Mouth mode -->
+                    <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-[11px] font-semibold text-white/80">Mouth Mode</p>
+                            <p class="text-[10px] text-white/40 mt-0.5">Open = cycle · Close 1s = speak</p>
+                        </div>
+                        <button type="button" id="aac-mouth-toggle-btn" onclick="aacToggleMouth()"
+                                class="shrink-0 rounded-full border border-white/20 bg-white/8 px-3 py-1.5 text-[11px] font-semibold text-white/70 transition hover:bg-white/15 active:scale-95">
+                            Off
+                        </button>
+                    </div>
+
+                </section>
             </div>
         </aside>
 
@@ -632,6 +747,8 @@
 
         </div>
 
+    <div id="aac-caption-bar" role="status" aria-live="polite"></div>
+
     </main>
 
     <!-- JS Libraries -->
@@ -643,6 +760,7 @@
     <script src="{% static 'js/gesture_engine.js' %}"></script>
     <script src="{% static 'js/narration.js' %}"></script>
     <script src="{% static 'js/presentation.js' %}"></script>
+    <script src="{% static 'js/aac_engine.js' %}"></script>
     {{ initial_slides|json_script:"initial-slides-json" }}
 
     <!-- Main Application Script -->
@@ -656,6 +774,7 @@
             const panels = {
                 camera_controls: document.getElementById('hub-tab-camera-controls'),
                 narration: document.getElementById('hub-tab-narration'),
+                aac: document.getElementById('hub-tab-aac'),
             };
 
             const DURATION_MS = 180;
@@ -973,6 +1092,191 @@
             if (btn) btn.style.display = hasFile ? 'flex' : 'none';
         }
 
+
+        // ================================================================
+        // AAC Speak
+        // ================================================================
+        let _aacEngine = null;
+        let _aacCategory = null;
+        let _aacMouthActive = false;
+        let _aacCaptionTimer = null;
+
+        function _aacEnsureEngine() {
+            if (_aacEngine) return;
+            _aacEngine = new AACEngine({
+                debug: false,
+                onSpeak: (text) => _aacCaption(text),
+                onCycle: () => {},
+            });
+        }
+
+        // Hook tab switching to build grid on first open
+        document.addEventListener('DOMContentLoaded', () => {
+            const origSelect = window.selectHubTab;
+            window.selectHubTab = function(key) {
+                origSelect && origSelect(key);
+                if (key === 'aac') { _aacEnsureEngine(); _aacBuildCategoryTabs(); }
+            };
+        });
+
+        function _aacBuildCategoryTabs() {
+            const tabBar = document.getElementById('aac-cat-tabs');
+            if (!tabBar) return;
+            if (tabBar.dataset.built === '1') { _aacRefreshCustomTab(); return; }
+            tabBar.dataset.built = '1';
+
+            const cats = Object.keys(AAC_DEFAULT_PHRASES);
+            if (!_aacCategory) _aacCategory = cats[0];
+
+            cats.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = cat;
+                btn.className = _aacTabClass(cat === _aacCategory);
+                btn.onclick = () => _aacSelectCat(cat);
+                tabBar.appendChild(btn);
+            });
+
+            const customBtn = document.createElement('button');
+            customBtn.type = 'button';
+            customBtn.id = 'aac-custom-tab-btn';
+            customBtn.textContent = '\u2b50 Mine';
+            customBtn.className = _aacTabClass(false);
+            customBtn.onclick = () => _aacSelectCat('__custom__');
+            tabBar.appendChild(customBtn);
+
+            _aacBuildGrid(_aacCategory);
+        }
+
+        function _aacTabClass(active) {
+            return 'aac-cat-tab rounded-full border px-2.5 py-1 text-[10px] font-semibold transition ' +
+                (active
+                    ? 'border-zentrol-teal-500 bg-zentrol-teal-500/20 text-zentrol-teal-300'
+                    : 'border-white/15 bg-white/5 text-white/55 hover:text-white/80');
+        }
+
+        function _aacRefreshCustomTab() {
+            const btn = document.getElementById('aac-custom-tab-btn');
+            if (btn && _aacEngine && _aacEngine._customPhrases.length > 0) {
+                btn.textContent = '\u2b50 Mine (' + _aacEngine._customPhrases.length + ')';
+            }
+        }
+
+        function _aacSelectCat(cat) {
+            _aacCategory = cat;
+            document.querySelectorAll('.aac-cat-tab').forEach(b => {
+                const active = (cat === '__custom__')
+                    ? b.textContent.startsWith('\u2b50')
+                    : b.textContent === cat;
+                b.className = _aacTabClass(active);
+            });
+            _aacBuildGrid(cat);
+        }
+
+        function _aacBuildGrid(cat) {
+            const grid = document.getElementById('aac-phrase-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const phrases = cat === '__custom__'
+                ? (_aacEngine ? _aacEngine._customPhrases : [])
+                : (AAC_DEFAULT_PHRASES[cat] || []);
+
+            if (!phrases.length) {
+                grid.innerHTML = '<p class="text-[10px] text-white/30 py-2">' +
+                    (cat === '__custom__' ? 'No custom phrases yet.' : 'No phrases.') + '</p>';
+                return;
+            }
+
+            phrases.forEach(phrase => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'aac-phrase-btn';
+                btn.textContent = phrase;
+                btn.onclick = () => {
+                    _aacEnsureEngine();
+                    _aacEngine.speak(phrase);
+                    btn.classList.add('aac-phrase-selected');
+                    setTimeout(() => btn.classList.remove('aac-phrase-selected'), 700);
+                };
+                if (cat === '__custom__') {
+                    let pt;
+                    btn.addEventListener('mousedown', () => {
+                        pt = setTimeout(() => {
+                            if (confirm('Remove "' + phrase + '"?')) {
+                                _aacEngine.removeCustomPhrase(phrase);
+                                _aacBuildGrid('__custom__');
+                                _aacRefreshCustomTab();
+                            }
+                        }, 800);
+                    });
+                    btn.addEventListener('mouseup',    () => clearTimeout(pt));
+                    btn.addEventListener('mouseleave', () => clearTimeout(pt));
+                }
+                grid.appendChild(btn);
+            });
+        }
+
+        function aacSpeakTyped() {
+            const inp = document.getElementById('aac-type-input');
+            const text = inp ? inp.value.trim() : '';
+            if (!text) return;
+            _aacEnsureEngine();
+            _aacEngine.speak(text);
+            inp.value = '';
+            inp.focus();
+        }
+
+        function aacAddCustom() {
+            const inp = document.getElementById('aac-custom-input');
+            const text = inp ? inp.value.trim() : '';
+            if (!text) return;
+            _aacEnsureEngine();
+            _aacEngine.addCustomPhrase(text);
+            inp.value = '';
+            _aacRefreshCustomTab();
+            if (_aacCategory === '__custom__') _aacBuildGrid('__custom__');
+        }
+
+        async function aacToggleMouth() {
+            _aacMouthActive = !_aacMouthActive;
+            const btn = document.getElementById('aac-mouth-toggle-btn');
+            if (_aacMouthActive) {
+                _aacEnsureEngine();
+                await _aacEngine.start(document.getElementById('camera-feed'));
+                if (btn) {
+                    btn.textContent = 'On';
+                    btn.classList.add('bg-zentrol-teal-500/30', 'border-zentrol-teal-500/50', 'text-zentrol-teal-300');
+                    btn.classList.remove('border-white/20', 'text-white/70');
+                }
+            } else {
+                _aacEngine && _aacEngine.stop();
+                if (btn) {
+                    btn.textContent = 'Off';
+                    btn.classList.remove('bg-zentrol-teal-500/30', 'border-zentrol-teal-500/50', 'text-zentrol-teal-300');
+                    btn.classList.add('border-white/20', 'text-white/70');
+                }
+                const r = document.getElementById('aac-mouth-ratio');
+                if (r) { r.textContent = ''; r.classList.remove('open'); }
+            }
+        }
+
+        function _aacCaption(text) {
+            const el = document.getElementById('aac-caption-bar');
+            if (!el) return;
+            el.textContent = '\uD83D\uDDE3\uFE0F ' + text;
+            el.classList.add('visible');
+            clearTimeout(_aacCaptionTimer);
+            _aacCaptionTimer = setTimeout(() => el.classList.remove('visible'), 4000);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.code === 'Space') {
+                e.preventDefault();
+                window.selectHubTab && window.selectHubTab('aac');
+            }
+        });
+
         // ================================================================
         // Initialize Narration Manager
         // ================================================================
@@ -1107,6 +1411,7 @@
         window.addEventListener('beforeunload', () => {
             window.narrationManager?.stop();
             gestureEngine?.stop();
+            _aacEngine?.stop();
         });
 
         window.addEventListener('load', () => {
