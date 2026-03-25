@@ -4,29 +4,93 @@ import subprocess
 import tempfile
 import uuid
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 
 import fitz
+from PIL import Image
 from django.conf import settings
-from django.contrib.auth import login
+from django.core.files.base import ContentFile
+from django.contrib import messages
+from django.core.validators import ValidationError, validate_email
+from django.db.models import DateTimeField
+from django.db.models.functions import Coalesce
+from django.utils import timezone
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from urllib.parse import urlencode
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import GestureLog, PresentationAsset, PresentationSession
+from .models import GestureLog, PresentationAsset, PresentationSession, UserProfile
 from .serializers import GestureLogSerializer
 from .throttles import GestureLogAnonThrottle
+
+
+def _redirect_dashboard_preserving_workspace(request):
+    """After account POST, return to the same dashboard filter/view (no open redirects)."""
+    q = {}
+    f = (request.POST.get('return_filter') or '').strip()
+    if f in {'all', 'recent', 'created', 'favorites'}:
+        q['filter'] = f
+    v = (request.POST.get('return_view') or '').strip()
+    if v in {'grid', 'list'}:
+        q['view'] = v
+    url = reverse('dashboard')
+    if q:
+        url = f'{url}?{urlencode(q)}'
+    return redirect(url)
 
 
 def _build_media_url(path: Path) -> str:
     rel = path.relative_to(settings.MEDIA_ROOT).as_posix()
     return f"{settings.MEDIA_URL.rstrip('/')}/{rel}"
+
+
+def _get_user_active_sessions(request):
+    """
+    Return active (non-expired) DB-backed sessions for the current user.
+    Used by Account -> Security -> Devices and sessions.
+    """
+    if settings.SESSION_ENGINE != 'django.contrib.sessions.backends.db':
+        return []
+
+    from django.contrib.sessions.models import Session
+
+    current_key = request.session.session_key
+    now = timezone.now()
+    sessions = []
+    for s in Session.objects.filter(expire_date__gt=now):
+        try:
+            data = s.get_decoded()
+            uid = data.get('_auth_user_id')
+            if uid is None or str(uid) != str(request.user.pk):
+                continue
+        except Exception:
+            continue
+
+        # We may not have user-agent/ip info in your current session payload,
+        # but the list still shows session key + expiry.
+        label = data.get('user_agent') or data.get('browser') or data.get('device') or 'Session'
+        sessions.append({
+            'session_key': s.session_key,
+            'expire_date': s.expire_date,
+            'is_current': current_key and s.session_key == current_key,
+            'label': label,
+        })
+
+    # Sort by most recent expiry (best-effort)
+    sessions.sort(key=lambda x: x.get('expire_date') or now, reverse=True)
+    return sessions
 
 
 def _resolve_soffice_binary() -> str:
@@ -129,6 +193,7 @@ def register_view(request):
     return render(request, 'auth/register.html', {'form': form})
 
 
+@never_cache
 @login_required
 def dashboard_view(request):
     """Dashboard-style workspace with persisted presentations."""
@@ -143,12 +208,202 @@ def dashboard_view(request):
     if active_filter == 'favorites':
         assets = assets.filter(is_favorite=True)
 
-    assets = assets.order_by('-updated_at')
+    if active_filter == 'recent':
+        # Sort by last time the deck was opened; fall back to last modified until first open.
+        assets = assets.annotate(
+            _recent_sort=Coalesce('last_opened_at', 'updated_at', output_field=DateTimeField())
+        ).order_by('-_recent_sort')
+    elif active_filter == 'created':
+        assets = assets.order_by('-created_at')
+    else:
+        assets = assets.order_by('-updated_at')
+
+    user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    user_sessions = _get_user_active_sessions(request)
     return render(request, 'dashboard.html', {
         'assets': assets,
         'view_mode': view_mode,
         'active_filter': active_filter,
+        'user_profile': user_profile,
+        'user_sessions': user_sessions,
     })
+
+
+@login_required
+@require_POST
+def update_account_profile(request):
+    """Update basic profile fields and optional avatar from Account settings modal."""
+    user = request.user
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    user.first_name = (request.POST.get('first_name') or '')[:150]
+    user.last_name = (request.POST.get('last_name') or '')[:150]
+    email = (request.POST.get('email') or '').strip()
+    if not email:
+        messages.error(request, 'Email is required.')
+        return _redirect_dashboard_preserving_workspace(request)
+    try:
+        validate_email(email)
+    except ValidationError:
+        messages.error(request, 'Please enter a valid email address.')
+        return _redirect_dashboard_preserving_workspace(request)
+    user.email = email
+    user.save(update_fields=['first_name', 'last_name', 'email'])
+
+    avatar_file = request.FILES.get('avatar')
+    if avatar_file:
+        max_bytes = 2 * 1024 * 1024
+        ext = Path(avatar_file.name).suffix.lower()
+        if ext not in {'.jpg', '.jpeg', '.png', '.webp', '.gif'}:
+            messages.error(request, 'Please upload a JPG, PNG, WebP, or GIF image.')
+            return _redirect_dashboard_preserving_workspace(request)
+        try:
+            data = avatar_file.read()
+            img = Image.open(BytesIO(data))
+            img.load()
+        except Exception:
+            messages.error(request, 'Could not read that image. Try another file.')
+            return _redirect_dashboard_preserving_workspace(request)
+
+        # Compress oversized avatars instead of rejecting them.
+        if len(data) > max_bytes:
+            try:
+                # Flatten transparency (PNG/GIF) onto white background for JPEG.
+                if img.mode in {'RGBA', 'LA'} or (img.mode == 'P' and 'transparency' in img.info):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode in {'RGBA', 'LA'}:
+                        background.paste(img, mask=img.split()[-1])
+                    else:
+                        background.paste(img.convert('RGBA'), mask=img.convert('RGBA').split()[-1])
+                    img = background
+                else:
+                    img = img.convert('RGB')
+
+                compress_targets = [
+                    (512, 75),
+                    (512, 60),
+                    (512, 45),
+                    (384, 60),
+                    (384, 45),
+                    (256, 45),
+                ]
+
+                compressed_bytes = None
+                for max_dim, quality in compress_targets:
+                    tmp = img.copy()
+                    tmp.thumbnail((max_dim, max_dim))
+                    out = BytesIO()
+                    tmp.save(out, format='JPEG', quality=quality, optimize=True)
+                    if out.tell() <= max_bytes:
+                        compressed_bytes = out.getvalue()
+                        ext = '.jpg'
+                        break
+
+                if not compressed_bytes:
+                    messages.error(request, 'Could not compress profile photo under 2 MB.')
+                    return _redirect_dashboard_preserving_workspace(request)
+
+                data = compressed_bytes
+            except Exception:
+                messages.error(request, 'Profile photo was too large and could not be compressed.')
+                return _redirect_dashboard_preserving_workspace(request)
+
+        safe_name = f'{user.pk}_{uuid.uuid4().hex}{ext}'
+        if profile.avatar:
+            profile.avatar.delete(save=False)
+        profile.avatar.save(safe_name, ContentFile(data), save=True)
+
+    messages.success(request, 'Profile updated.')
+    return _redirect_dashboard_preserving_workspace(request)
+
+
+@login_required
+@require_POST
+def logout_all_sessions_view(request):
+    """Delete other database sessions for this user (keeps current session)."""
+    if settings.SESSION_ENGINE != 'django.contrib.sessions.backends.db':
+        messages.warning(
+            request,
+            'Sign out everywhere is not available with the current session storage.',
+        )
+        return redirect('dashboard')
+    from django.contrib.sessions.models import Session
+
+    current_key = request.session.session_key
+    deleted = 0
+    for s in Session.objects.exclude(session_key=current_key):
+        try:
+            data = s.get_decoded()
+            uid = data.get('_auth_user_id')
+            if uid is not None and str(request.user.pk) == str(uid):
+                s.delete()
+                deleted += 1
+        except Exception:
+            continue
+    request.session.cycle_key()
+    if deleted:
+        messages.success(request, f'Signed out of {deleted} other session(s).')
+    else:
+        messages.info(request, 'No other active sessions were found.')
+    return redirect('dashboard')
+
+
+@login_required
+@require_POST
+def logout_single_session_view(request, session_key):
+    """
+    Delete a single active session for the current user.
+    This is used by Account -> Security -> Devices and sessions.
+    """
+    if settings.SESSION_ENGINE != 'django.contrib.sessions.backends.db':
+        messages.warning(
+            request,
+            'Sign out from individual sessions is not available with the current session storage.',
+        )
+        return redirect('dashboard')
+
+    from django.contrib.sessions.models import Session
+
+    current_key = request.session.session_key
+    if session_key == current_key:
+        # User removed the current device; log them out.
+        logout(request)
+        messages.info(request, 'You have been signed out.')
+        return redirect('home')
+
+    try:
+        s = Session.objects.get(session_key=session_key)
+    except Session.DoesNotExist:
+        messages.error(request, 'That session no longer exists.')
+        return redirect('dashboard')
+
+    try:
+        data = s.get_decoded()
+        uid = data.get('_auth_user_id')
+        if uid is None or str(uid) != str(request.user.pk):
+            messages.error(request, 'You cannot modify this session.')
+            return redirect('dashboard')
+    except Exception:
+        # If decoding fails, don't delete.
+        messages.error(request, 'Could not verify that session.')
+        return redirect('dashboard')
+
+    s.delete()
+    messages.success(request, 'Session removed.')
+    return redirect('dashboard')
+
+
+@login_required
+@require_POST
+def delete_account_view(request):
+    """Permanently delete the signed-in user and related data."""
+    if request.POST.get('confirm_delete') != '1':
+        messages.error(request, 'Account deletion was not confirmed.')
+        return redirect('dashboard')
+    user = request.user
+    logout(request)
+    user.delete()
+    messages.info(request, 'Your Zentrol account has been deleted.')
+    return redirect('home')
 
 
 def presentation_view(request):
@@ -162,6 +417,7 @@ def presentation_view(request):
         asset = get_object_or_404(PresentationAsset, id=asset_id, user=request.user)
         initial_slides = asset.slides_json or []
         initial_asset_title = asset.title
+        PresentationAsset.objects.filter(pk=asset.pk).update(last_opened_at=timezone.now())
 
     PresentationSession.objects.get_or_create(
         session_id=session_id,

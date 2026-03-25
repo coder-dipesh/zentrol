@@ -20,7 +20,11 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-key-change-in-produc
 DEBUG = env.bool('DEBUG', default=True)
 
 # Never use '*' in production — set explicit hosts / domains.
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
+    'localhost',
+    '127.0.0.1',
+    '.ngrok-free.app',  # ngrok static domain tunnels (subdomain wildcard)
+])
 
 # Application definition
 INSTALLED_APPS = [
@@ -170,6 +174,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     'http://localhost:8000',
     'http://127.0.0.1:8000',
+    'https://*.ngrok-free.app',
 ])
 
 # REST Framework
