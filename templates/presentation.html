@@ -639,31 +639,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Save custom phrase -->
-                    <div class="flex gap-2">
-                        <input id="aac-custom-input" type="text" placeholder="+ Save a custom phrase…"
-                               autocomplete="off"
-                               class="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/70 placeholder-white/25 outline-none focus:border-zentrol-teal-500/40 transition"
-                               onkeydown="if(event.key==='Enter'){event.preventDefault();aacAddCustom();}">
-                        <button type="button" onclick="aacAddCustom()"
-                                class="shrink-0 rounded-xl border border-zentrol-teal-500/40 px-3 py-2 text-[11px] font-semibold text-zentrol-teal-300 transition hover:bg-zentrol-teal-500/15 active:scale-95">
-                            Add
-                        </button>
-                    </div>
-
-                    <!-- Mouth mode -->
-                    <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 flex items-center justify-between gap-3">
-                        <div>
-                            <p class="text-[11px] font-semibold text-white/80">Mouth Mode</p>
-                            <p class="text-[10px] text-white/40 mt-0.5">Open = cycle · Close 1s = speak</p>
-                        </div>
-                        <button type="button" id="aac-mouth-toggle-btn" onclick="aacToggleMouth()"
-                                class="shrink-0 rounded-full border border-white/20 bg-white/8 px-3 py-1.5 text-[11px] font-semibold text-white/70 transition hover:bg-white/15 active:scale-95">
-                            Off
-                        </button>
-                    </div>
-
                 </section>
             </div>
         </aside>
