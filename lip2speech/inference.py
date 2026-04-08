@@ -1,67 +1,61 @@
 """
-Lip2Speech inference pipeline.
+Lip2Speech inference pipeline using the original pre-trained model.
 
-Usage:
-    pipeline = Lip2SpeechPipeline.load(weights_path="path/to/model.pt")
-    audio_bytes, meta = pipeline.run(video_path="path/to/video.mp4")
-
-The pipeline:
-  1. Extracts face + lip frames (preprocessing.py)
-  2. Runs the Lip2Speech neural network (nn/model.py)
-  3. Converts the predicted mel spectrogram → raw audio via Griffin-Lim
-  4. Returns WAV bytes + inference metadata dict
-
-Pre-trained weights are available at:
-  https://github.com/Chris10M/Lip2Speech
+Reference: "Show Me Your Face, And I'll Tell You How You Speak"
+Weights:   lip2speech/weights/lip2speech_final.pth  (265 MB)
 """
 
 from __future__ import annotations
 
 import io
 import logging
+import sys
 import time
+import wave
 from pathlib import Path
 
 import numpy as np
+import torch
 
 logger = logging.getLogger(__name__)
 
-# Audio parameters (must match training config)
-SAMPLE_RATE = 16_000
-N_FFT = 1024
-HOP_LENGTH = 256
-WIN_LENGTH = 1024
-N_MELS = 80
-FMIN = 0
-FMAX = 8000
+# Audio parameters (must match training config in hparams.py)
+SAMPLE_RATE   = 16_000
+N_FFT         = 1024
+HOP_LENGTH    = 256
+WIN_LENGTH    = 1024
+N_MELS        = 80
+FMIN          = 0
+FMAX          = 8000
 GRIFFIN_LIM_ITERS = 60
+
+# Default weights path (overridden via settings.LIP2SPEECH_WEIGHTS_PATH)
+_DEFAULT_WEIGHTS = Path(__file__).parent / 'weights' / 'lip2speech_final.pth'
+
+
+def _add_original_model_to_path():
+    """Add the original model directory to sys.path so its imports resolve."""
+    orig = str(Path(__file__).parent / 'original_model')
+    if orig not in sys.path:
+        sys.path.insert(0, orig)
 
 
 def _mel_to_audio(mel: np.ndarray) -> np.ndarray:
     """
-    Convert a mel spectrogram (T, n_mels) to a raw waveform via Griffin-Lim.
-
-    mel values are assumed to be in log-scale (natural log or log10 × 20 dB).
+    mel: (T, n_mels) float32  →  raw waveform float32.
     Returns silence if the spectrogram is too short for Griffin-Lim.
     """
     import librosa
 
-    # Need at least N_FFT samples worth of frames; each frame = HOP_LENGTH samples.
     min_frames = N_FFT // HOP_LENGTH + 1
     if mel.shape[0] < min_frames:
         return np.zeros(N_FFT, dtype=np.float32)
 
-    # Invert log-mel → linear mel
     mel_linear = np.exp(mel.T)  # (n_mels, T)
-
-    # Build mel filter bank and invert to linear spectrogram
-    mel_basis = librosa.filters.mel(
+    mel_basis  = librosa.filters.mel(
         sr=SAMPLE_RATE, n_fft=N_FFT, n_mels=N_MELS, fmin=FMIN, fmax=FMAX
     )
-    # Pseudo-inverse mel-to-linear
     lin_spec = np.maximum(1e-8, np.dot(np.linalg.pinv(mel_basis), mel_linear))
-
-    # Griffin-Lim phase reconstruction
     audio = librosa.griffinlim(
         lin_spec,
         n_iter=GRIFFIN_LIM_ITERS,
@@ -72,139 +66,87 @@ def _mel_to_audio(mel: np.ndarray) -> np.ndarray:
     return audio.astype(np.float32)
 
 
-def _audio_to_wav_bytes(audio: np.ndarray, sample_rate: int = SAMPLE_RATE) -> bytes:
-    """Encode a float32 waveform as 16-bit PCM WAV bytes."""
-    import wave, struct
-
-    # Clip and convert to int16
-    audio_int16 = np.clip(audio, -1.0, 1.0)
-    audio_int16 = (audio_int16 * 32767).astype(np.int16)
-
+def _audio_to_wav_bytes(audio: np.ndarray) -> bytes:
+    audio_i16 = np.clip(audio, -1.0, 1.0)
+    audio_i16  = (audio_i16 * 32767).astype(np.int16)
     buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
+    with wave.open(buf, 'wb') as wf:
         wf.setnchannels(1)
-        wf.setsampwidth(2)  # 16-bit
-        wf.setframerate(sample_rate)
-        wf.writeframes(audio_int16.tobytes())
+        wf.setsampwidth(2)
+        wf.setframerate(SAMPLE_RATE)
+        wf.writeframes(audio_i16.tobytes())
     return buf.getvalue()
 
 
 class Lip2SpeechPipeline:
-    """
-    End-to-end inference pipeline.
 
-    Attributes:
-        model: The Lip2Speech neural network (nn.Module).
-        device: torch.device the model is on.
-    """
-
-    def __init__(self, model, device=None):
-        import torch
-        self.model = model
-        self.device = device or torch.device("cpu")
-        self.model.to(self.device)
-        self.model.eval()
+    def __init__(self, model, device: torch.device):
+        self.model  = model
+        self.device = device
 
     # ------------------------------------------------------------------
     @classmethod
-    def load(
-        cls,
-        weights_path: str | Path | None = None,
-        device=None,
-        **model_kwargs,
-    ) -> "Lip2SpeechPipeline":
-        """
-        Instantiate the pipeline, optionally loading pre-trained weights.
-
-        If `weights_path` is None the model runs with random weights
-        (useful for testing the pipeline end-to-end before training).
-
-        Args:
-            weights_path: Path to a .pt checkpoint saved with torch.save(model.state_dict(), …).
-            device: 'cpu', 'cuda', 'mps', or a torch.device.  Auto-detected if None.
-            **model_kwargs: Passed through to Lip2Speech.__init__.
-        """
-        import torch
-        from .nn.model import Lip2Speech
+    def load(cls, weights_path=None, device=None, **_) -> 'Lip2SpeechPipeline':
+        _add_original_model_to_path()
+        from model.model import get_network  # original repo code
 
         if device is None:
-            if torch.cuda.is_available():
-                device = torch.device("cuda")
-            else:
-                # MPS (Apple Silicon) excluded: adaptive_avg_pool3d not yet
-                # supported on MPS. CPU works on all platforms.
-                device = torch.device("cpu")
+            # MPS excluded: adaptive_avg_pool3d not supported on MPS
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        model = Lip2Speech(**model_kwargs)
+        net = get_network('test')
 
-        if weights_path is not None:
-            weights_path = Path(weights_path)
-            if not weights_path.exists():
-                logger.warning("Weights file not found at %s — running with random weights.", weights_path)
-            else:
-                state = torch.load(str(weights_path), map_location=device)
-                model.load_state_dict(state)
-                logger.info("Loaded Lip2Speech weights from %s", weights_path)
-        else:
+        # Resolve weights path
+        wpath = Path(weights_path) if weights_path else _DEFAULT_WEIGHTS
+        if not wpath.exists():
             logger.warning(
-                "No weights_path provided — model has random weights. "
-                "Download pre-trained weights from https://github.com/Chris10M/Lip2Speech"
+                "Weights not found at %s — running with random weights. "
+                "Download from https://github.com/Chris10M/Lip2Speech", wpath
             )
+        else:
+            state = torch.load(str(wpath), map_location=device)
+            if 'state_dict' in state:
+                state = state['state_dict']
+            # Strip speaker_encoder prefix (it's a separate module in the checkpoint)
+            state = {k: v for k, v in state.items() if not k.startswith('speaker_encoder.')}
+            net.load_state_dict(state, strict=True)
+            logger.info("Loaded Lip2Speech weights from %s", wpath)
 
-        return cls(model, device=device)
+        net = net.to(device).eval()
+        return cls(net, device)
 
     # ------------------------------------------------------------------
-    def run(
-        self,
-        video_path: str | Path,
-        max_frames: int = 150,
-    ) -> tuple[bytes, dict]:
-        """
-        Run full inference on a video file.
-
-        Args:
-            video_path: Path to the input video (mp4, avi, mov, …).
-            max_frames: Maximum frames to extract from the video.
-
-        Returns:
-            wav_bytes: Raw WAV file as bytes (ready to write to disk or serve over HTTP).
-            meta: Dict with inference metadata:
-                  {num_frames, mel_frames, duration_seconds, processing_time_ms, device}
-        """
-        import torch
+    def run(self, video_path: str | Path, max_frames: int = 150):
+        from .preprocessing import extract_from_video
 
         t0 = time.perf_counter()
 
-        # 1. Preprocess
-        from .preprocessing import extract_from_video
-        face_np, lips_np = extract_from_video(video_path, max_frames=max_frames)
+        video_t, face_t = extract_from_video(video_path, max_frames=max_frames)
+        video_t = video_t.to(self.device)  # (1, 3, T, 96, 96)
+        face_t  = face_t.to(self.device)   # (1, 1, 3, 160, 160)
 
-        # face_np: (96, 96, 3)  → tensor (1, 3, 96, 96)
-        face_t = torch.from_numpy(face_np).permute(2, 0, 1).unsqueeze(0).to(self.device)
-
-        # lips_np: (T, 48, 96) → tensor (1, T, 48, 96)
-        lips_t = torch.from_numpy(lips_np).unsqueeze(0).to(self.device)
-
-        # 2. Forward pass
         with torch.no_grad():
-            mel_pred, _ = self.model.synthesise(face_t, lips_t)
+            # inference() returns (mel_outputs, stop_tokens, attention_matrix)
+            # mel_outputs shape: (1, n_mels, T_mel)
+            outputs = self.model.inference(video_t, face_t, return_attention_map=True)
+            mel_pred, stop_tokens = outputs[0], outputs[1]
 
-        # mel_pred: (1, T_mel, 80) → numpy (T_mel, 80)
-        mel_np = mel_pred.squeeze(0).cpu().numpy()
+        # Trim at stop token
+        stop_idx = int(stop_tokens[0].item()) if stop_tokens.numel() > 0 else mel_pred.shape[2]
+        mel_np = mel_pred[0, :, :stop_idx].cpu().numpy().T  # (T_mel, n_mels)
 
-        # 3. Griffin-Lim → waveform → WAV bytes
-        audio = _mel_to_audio(mel_np)
+        audio    = _mel_to_audio(mel_np)
         wav_bytes = _audio_to_wav_bytes(audio)
 
-        elapsed_ms = (time.perf_counter() - t0) * 1000
-        duration_s = len(audio) / SAMPLE_RATE
+        elapsed_ms  = (time.perf_counter() - t0) * 1000
+        duration_s  = len(audio) / SAMPLE_RATE
 
         meta = {
-            "num_frames": int(lips_np.shape[0]),
-            "mel_frames": int(mel_np.shape[0]),
-            "duration_seconds": round(duration_s, 3),
-            "processing_time_ms": round(elapsed_ms, 1),
-            "device": str(self.device),
+            'num_frames':        int(video_t.shape[2]),
+            'mel_frames':        mel_np.shape[0],
+            'duration_seconds':  round(duration_s, 3),
+            'processing_time_ms': round(elapsed_ms, 1),
+            'device':            str(self.device),
         }
         logger.info("Lip2Speech inference complete: %s", meta)
         return wav_bytes, meta
