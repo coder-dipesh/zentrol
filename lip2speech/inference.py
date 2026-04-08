@@ -42,8 +42,14 @@ def _mel_to_audio(mel: np.ndarray) -> np.ndarray:
     Convert a mel spectrogram (T, n_mels) to a raw waveform via Griffin-Lim.
 
     mel values are assumed to be in log-scale (natural log or log10 × 20 dB).
+    Returns silence if the spectrogram is too short for Griffin-Lim.
     """
     import librosa
+
+    # Need at least N_FFT samples worth of frames; each frame = HOP_LENGTH samples.
+    min_frames = N_FFT // HOP_LENGTH + 1
+    if mel.shape[0] < min_frames:
+        return np.zeros(N_FFT, dtype=np.float32)
 
     # Invert log-mel → linear mel
     mel_linear = np.exp(mel.T)  # (n_mels, T)
