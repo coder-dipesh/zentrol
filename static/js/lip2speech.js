@@ -1,50 +1,58 @@
 /**
  * LipToSpeechEngine — live lip-to-speech synthesis from the camera feed.
  *
- * Hooks into the existing camera stream (HTMLVideoElement.srcObject),
- * records short video chunks via MediaRecorder, sends each chunk to
- * POST /api/lip2speech/synthesize/, and plays back the returned WAV audio
- * in a sequential queue so synthesised speech doesn't overlap.
- *
- * Usage (after GestureEngine has started the camera):
- *   const engine = new LipToSpeechEngine(document.getElementById('camera-feed'));
- *   engine.start();
- *   engine.stop();
+ * Key design:
+ *  - AudioContext is created on the toggle click (a user gesture) so the
+ *    browser never blocks playback — no matter how long synthesis takes.
+ *  - Web Audio API (decodeAudioData + BufferSource) is used instead of
+ *    new Audio() so autoplay restrictions never apply after that first gesture.
  */
 
 class LipToSpeechEngine {
   /**
-   * @param {HTMLVideoElement} videoElement  — the live camera feed element
-   * @param {object}           options
-   * @param {number}           options.chunkMs        — recording window per chunk (ms), default 3000
-   * @param {number}           options.overlapMs       — overlap between chunks (ms), default 0
-   * @param {function}         options.onStatusChange  — called with (status, detail) on state changes
-   * @param {function}         options.onError         — called with (errorMessage)
+   * @param {HTMLVideoElement} videoElement
+   * @param {object}  options
+   * @param {number}  options.chunkMs        recording window per chunk (ms), default 3000
+   * @param {function} options.onStatusChange called with (status, detail)
+   * @param {function} options.onError        called with (errorMessage)
    */
   constructor(videoElement, options = {}) {
-    this.video      = videoElement;
-    this.chunkMs    = options.chunkMs       ?? 3000;
-    this.overlapMs  = options.overlapMs     ?? 0;
-    this.onStatus   = options.onStatusChange ?? (() => {});
-    this.onError    = options.onError        ?? console.error;
+    this.video    = videoElement;
+    this.chunkMs  = options.chunkMs       ?? 3000;
+    this.onStatus = options.onStatusChange ?? (() => {});
+    this.onError  = options.onError        ?? console.error;
 
     this._recorder    = null;
     this._running     = false;
-    this._audioQueue  = [];
+    this._audioQueue  = [];   // { arrayBuffer, durationSec }
     this._playing     = false;
-    this._currentAudio = null;
+    this._currentNode = null;
     this._loopTimer   = null;
+
+    // AudioContext created immediately (during user gesture in start())
+    this._audioCtx = null;
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
   start() {
     if (this._running) return;
+
     const stream = this.video.srcObject;
     if (!stream) {
-      this.onError('Camera stream not available. Make sure the camera is enabled.');
+      this.onError('Camera stream not available. Enable the camera first.');
       return;
     }
+
+    // Create / resume AudioContext during the user-gesture call stack.
+    // This is the key unlock — all subsequent play() calls will succeed.
+    if (!this._audioCtx) {
+      this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this._audioCtx.state === 'suspended') {
+      this._audioCtx.resume();
+    }
+
     this._running = true;
     this._setStatus('listening', 'Listening for lip movements…');
     this._scheduleCapture();
@@ -53,16 +61,18 @@ class LipToSpeechEngine {
   stop() {
     this._running = false;
     clearTimeout(this._loopTimer);
+
     if (this._recorder && this._recorder.state !== 'inactive') {
       this._recorder.stop();
     }
-    if (this._currentAudio) {
-      this._currentAudio.pause();
-      this._currentAudio = null;
+    if (this._currentNode) {
+      try { this._currentNode.stop(); } catch (_) {}
+      this._currentNode = null;
     }
+
     this._audioQueue = [];
     this._playing    = false;
-    this._setStatus('idle', 'Lip to Speech stopped.');
+    this._setStatus('idle', 'Off — toggle to start');
   }
 
   // ── Capture loop ─────────────────────────────────────────────────────────────
@@ -71,13 +81,10 @@ class LipToSpeechEngine {
     if (!this._running) return;
     this._captureChunk()
       .then(() => {
-        if (this._running) {
-          this._loopTimer = setTimeout(() => this._scheduleCapture(), this.overlapMs);
-        }
+        if (this._running) this._scheduleCapture();
       })
       .catch((err) => {
         this.onError(`Recording error: ${err.message}`);
-        // Back-off and retry
         if (this._running) {
           this._loopTimer = setTimeout(() => this._scheduleCapture(), 2000);
         }
@@ -89,9 +96,9 @@ class LipToSpeechEngine {
       const stream = this.video.srcObject;
       if (!stream) return reject(new Error('No camera stream'));
 
-      // Pick the best supported MIME type
-      const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
-        .find((m) => MediaRecorder.isTypeSupported(m)) || '';
+      const mimeType = [
+        'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4',
+      ].find((m) => MediaRecorder.isTypeSupported(m)) || '';
 
       let recorder;
       try {
@@ -101,16 +108,12 @@ class LipToSpeechEngine {
       }
 
       this._recorder = recorder;
-      const chunks = [];
+      const chunks  = [];
 
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunks.push(e.data);
-      };
+      recorder.ondataavailable = (e) => { if (e.data?.size > 0) chunks.push(e.data); };
 
       recorder.onstop = () => {
-        if (!this._running) return resolve();
-        if (chunks.length === 0) return resolve();
-
+        if (!this._running || chunks.length === 0) return resolve();
         const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
         this._setStatus('synthesising', 'Synthesising speech…');
         this._synthesise(blob).finally(resolve);
@@ -142,30 +145,29 @@ class LipToSpeechEngine {
         let msg = `Server error ${resp.status}`;
         try { const d = await resp.json(); msg = d.error || msg; } catch (_) {}
         this.onError(msg);
-        this._setStatus('listening', 'Listening for lip movements…');
+        if (this._running) this._setStatus('listening', 'Listening for lip movements…');
         return;
       }
 
-      const audioBlob = await resp.blob();
-      const duration  = resp.headers.get('X-Duration-Seconds') || '?';
-      this._enqueueAudio(audioBlob, parseFloat(duration));
+      // Read as ArrayBuffer so Web Audio API can decode it without a URL
+      const arrayBuffer = await resp.arrayBuffer();
+      const duration    = parseFloat(resp.headers.get('X-Duration-Seconds') || '0');
+      this._enqueueAudio(arrayBuffer, duration);
 
     } catch (err) {
       this.onError(`Network error: ${err.message}`);
-      this._setStatus('listening', 'Listening for lip movements…');
+      if (this._running) this._setStatus('listening', 'Listening for lip movements…');
     }
   }
 
-  // ── Audio queue ───────────────────────────────────────────────────────────────
+  // ── Audio queue (Web Audio API — never blocked by autoplay policy) ────────────
 
-  _enqueueAudio(blob, durationSec) {
-    const url = URL.createObjectURL(blob);
-    this._audioQueue.push({ url, durationSec });
+  _enqueueAudio(arrayBuffer, durationSec) {
+    this._audioQueue.push({ arrayBuffer, durationSec });
     if (!this._playing) this._playNext();
   }
 
-  _playNext() {
-    if (!this._running && this._audioQueue.length === 0) return;
+  async _playNext() {
     const item = this._audioQueue.shift();
     if (!item) {
       this._playing = false;
@@ -174,35 +176,35 @@ class LipToSpeechEngine {
     }
 
     this._playing = true;
-    this._setStatus('playing', `Playing synthesised speech (${item.durationSec.toFixed(1)}s)…`);
+    const durStr  = item.durationSec > 0 ? `${item.durationSec.toFixed(1)}s` : '';
+    this._setStatus('playing', `Playing synthesised speech${durStr ? ` (${durStr})` : ''}…`);
 
-    const audio = new Audio(item.url);
-    this._currentAudio = audio;
+    try {
+      // Decode WAV — AudioContext was created during the user gesture so this works
+      const audioBuffer = await this._audioCtx.decodeAudioData(item.arrayBuffer);
 
-    audio.onended = () => {
-      URL.revokeObjectURL(item.url);
-      this._currentAudio = null;
+      const source = this._audioCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this._audioCtx.destination);
+      this._currentNode = source;
+
+      source.onended = () => {
+        this._currentNode = null;
+        this._playNext();
+      };
+
+      source.start(0);
+
+    } catch (err) {
+      this.onError(`Playback error: ${err.message}`);
+      this._currentNode = null;
       this._playNext();
-    };
-
-    audio.onerror = () => {
-      URL.revokeObjectURL(item.url);
-      this._currentAudio = null;
-      this._playNext();
-    };
-
-    audio.play().catch((err) => {
-      this.onError(`Audio playback error: ${err.message}`);
-      this._currentAudio = null;
-      this._playNext();
-    });
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
-  _setStatus(status, detail) {
-    this.onStatus(status, detail);
-  }
+  _setStatus(status, detail) { this.onStatus(status, detail); }
 
   _csrfToken() {
     const m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
