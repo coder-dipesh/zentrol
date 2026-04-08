@@ -478,6 +478,50 @@
                     </div>
                 </section>
 
+                <!-- Lip to Speech -->
+                <section id="hub-section-lip2speech" class="scroll-mt-2 rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 ring-1 ring-violet-400/10">
+                    <div class="mb-3 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold tracking-wide text-white">Lip to Speech</h3>
+                            <p class="text-[10px] text-white/50 mt-0.5">Synthesise speech from live lip movements</p>
+                        </div>
+                        <!-- Toggle -->
+                        <button id="l2s-toggle-btn" type="button" aria-pressed="false"
+                            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2
+                                   border-transparent bg-white/15 transition-colors duration-200
+                                   focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-1
+                                   focus:ring-offset-transparent"
+                            onclick="window.l2sToggle && window.l2sToggle()">
+                            <span id="l2s-toggle-thumb"
+                                  class="pointer-events-none inline-block h-5 w-5 translate-x-0 transform
+                                         rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out">
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Status -->
+                    <div id="l2s-status-row" class="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-[11px] text-white/60">
+                        <span id="l2s-status-dot" class="h-2 w-2 shrink-0 rounded-full bg-white/25"></span>
+                        <span id="l2s-status-text">Off — toggle to start</span>
+                    </div>
+
+                    <!-- Synthesised text output -->
+                    <div id="l2s-output" class="mt-2 hidden min-h-[40px] rounded-lg bg-black/20 px-3 py-2 text-[11px] leading-relaxed text-white/80 italic">
+                        Synthesised audio will play automatically…
+                    </div>
+
+                    <!-- Chunk duration selector -->
+                    <div class="mt-3 flex items-center justify-between gap-2 text-[10px] text-white/50">
+                        <label for="l2s-chunk-dur" class="shrink-0">Chunk size</label>
+                        <select id="l2s-chunk-dur"
+                                class="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white focus:outline-none">
+                            <option value="2000">2 s</option>
+                            <option value="3000" selected>3 s</option>
+                            <option value="5000">5 s</option>
+                        </select>
+                    </div>
+                </section>
+
                 <!-- Actions -->
                 <section id="hub-section-actions" class="scroll-mt-2 rounded-xl border border-white/10 bg-black/25 p-3 ring-1 ring-black/30">
                     <div class="mb-3 flex items-center justify-between">
@@ -736,6 +780,7 @@
     <script src="{% static 'js/narration.js' %}"></script>
     <script src="{% static 'js/presentation.js' %}"></script>
     <script src="{% static 'js/aac_engine.js' %}"></script>
+    <script src="{% static 'js/lip2speech.js' %}"></script>
     {{ initial_slides|json_script:"initial-slides-json" }}
 
     <!-- Main Application Script -->
@@ -1392,6 +1437,83 @@
         window.addEventListener('load', () => {
             initializeGestureControl();
         });
+
+        // ================================================================
+        // Lip to Speech — live integration
+        // ================================================================
+        (function initLip2Speech() {
+            let l2sEngine = null;
+            let active = false;
+
+            const toggleBtn  = document.getElementById('l2s-toggle-btn');
+            const toggleThumb = document.getElementById('l2s-toggle-thumb');
+            const statusDot  = document.getElementById('l2s-status-dot');
+            const statusText = document.getElementById('l2s-status-text');
+            const output     = document.getElementById('l2s-output');
+            const chunkSel   = document.getElementById('l2s-chunk-dur');
+
+            function setStatus(status, detail) {
+                const cfg = {
+                    idle:         { dot: 'bg-white/25',    text: 'text-white/60' },
+                    listening:    { dot: 'bg-violet-400',  text: 'text-violet-200' },
+                    synthesising: { dot: 'bg-amber-400',   text: 'text-amber-200' },
+                    playing:      { dot: 'bg-emerald-400', text: 'text-emerald-200' },
+                    error:        { dot: 'bg-red-400',     text: 'text-red-300' },
+                }[status] || { dot: 'bg-white/25', text: 'text-white/60' };
+
+                statusDot.className = `h-2 w-2 shrink-0 rounded-full ${cfg.dot}`;
+                statusText.className = `${cfg.text}`;
+                statusText.textContent = detail;
+
+                if (status === 'playing') {
+                    output.classList.remove('hidden');
+                    output.textContent = detail;
+                }
+            }
+
+            function setToggleOn(on) {
+                active = on;
+                toggleBtn.setAttribute('aria-pressed', String(on));
+                toggleBtn.classList.toggle('bg-violet-500', on);
+                toggleBtn.classList.toggle('bg-white/15', !on);
+                toggleThumb.classList.toggle('translate-x-5', on);
+                toggleThumb.classList.toggle('translate-x-0', !on);
+                if (!on) output.classList.add('hidden');
+            }
+
+            window.l2sToggle = function () {
+                if (!active) {
+                    // Start engine
+                    const chunkMs = parseInt(chunkSel?.value || '3000', 10);
+                    l2sEngine = new LipToSpeechEngine(videoElement, {
+                        chunkMs,
+                        onStatusChange: setStatus,
+                        onError: (msg) => {
+                            setStatus('error', msg);
+                            console.error('[Lip2Speech]', msg);
+                        },
+                    });
+                    l2sEngine.start();
+                    setToggleOn(true);
+                } else {
+                    // Stop engine
+                    l2sEngine?.stop();
+                    l2sEngine = null;
+                    setToggleOn(false);
+                    setStatus('idle', 'Off — toggle to start');
+                }
+            };
+
+            // Stop if camera turns off
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && active) {
+                    l2sEngine?.stop();
+                    l2sEngine = null;
+                    setToggleOn(false);
+                    setStatus('idle', 'Off — toggle to start');
+                }
+            });
+        })();
 
         // ================================================================
         // Error Recovery
