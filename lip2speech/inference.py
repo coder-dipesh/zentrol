@@ -124,9 +124,9 @@ class Lip2SpeechPipeline:
         if device is None:
             if torch.cuda.is_available():
                 device = torch.device("cuda")
-            elif torch.backends.mps.is_available():
-                device = torch.device("mps")
             else:
+                # MPS (Apple Silicon) excluded: adaptive_avg_pool3d not yet
+                # supported on MPS. CPU works on all platforms.
                 device = torch.device("cpu")
 
         model = Lip2Speech(**model_kwargs)
