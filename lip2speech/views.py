@@ -15,8 +15,6 @@ from pathlib import Path
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -41,7 +39,6 @@ def lip2speech_page(request):
     return render(request, 'lip2speech.html', {'recent_inferences': recent})
 
 
-@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def synthesize(request):
