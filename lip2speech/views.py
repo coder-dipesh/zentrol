@@ -83,10 +83,16 @@ def synthesize(request):
     )
 
     try:
-        from .inference import Lip2SpeechPipeline
+        from .apps import Lip2SpeechConfig
 
-        weights_path = getattr(settings, 'LIP2SPEECH_WEIGHTS_PATH', None)
-        pipeline = Lip2SpeechPipeline.load(weights_path=weights_path)
+        pipeline = Lip2SpeechConfig.pipeline
+        if pipeline is None:
+            # Startup loading failed — attempt lazy load now.
+            from .inference import Lip2SpeechPipeline
+            weights_path = getattr(settings, 'LIP2SPEECH_WEIGHTS_PATH', None)
+            pipeline = Lip2SpeechPipeline.load(weights_path=weights_path)
+            Lip2SpeechConfig.pipeline = pipeline
+
         wav_bytes, meta = pipeline.run(str(video_path))
 
         # Save audio
