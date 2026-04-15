@@ -71,18 +71,16 @@ class FullscreenAPI {
         document.body.classList.add('overflow-hidden', 'fake-fullscreen-active');
         this.container.classList.add('fake-fullscreen');
 
-        // Tailwind utility classes for fullscreen layout instead of custom CSS
+        // Overlay fullscreen layout — only add classes NOT already on #presentation-container.
+        // (Do not add/remove h-screen, w-screen, bg-gradient-to-br, pl-0: those are in the template;
+        // removing them on exit stripped layout and collapsed the slide area.)
         this.container.classList.add(
             'fixed',
             'inset-0',
-            'w-screen',
-            'h-screen',
             'z-[9999]',
-            'bg-gradient-to-br',
             'from-zentrol-navy-500',
             'to-zentrol-teal-600',
-            'pt-0',
-            'pl-0'
+            'pt-0'
         );
 
         // Do NOT set .reveal to w-screen — slide column is narrower than 100vw (Control Hub + padding).
@@ -112,25 +110,20 @@ class FullscreenAPI {
         document.body.classList.remove('overflow-hidden', 'fake-fullscreen-active');
         this.container.classList.remove('fake-fullscreen');
 
-        // Remove fullscreen layout classes
+        // Strip only fake-fullscreen overlays (never remove template layout tokens like h-screen / w-screen / bg-gradient-to-br).
         this.container.classList.remove(
             'fixed',
             'inset-0',
-            'w-screen',
-            'h-screen',
             'z-[9999]',
-            'bg-gradient-to-br',
             'from-zentrol-navy-500',
             'to-zentrol-teal-600',
-            'pt-0',
-            'pl-0'
+            'pt-0'
         );
 
-        // Reset Reveal container height/width back to default (header visible again)
+        // Clear any stray sizing from older exits; slide column height comes from the flex parent chain (h-full).
         const revealEl = this.container.querySelector('.reveal');
         if (revealEl) {
-            revealEl.classList.remove('w-screen', 'h-screen');
-            revealEl.classList.add('h-[calc(100vh-50px)]', 'w-full');
+            revealEl.classList.remove('w-screen', 'h-screen', 'h-[calc(100vh-50px)]');
         }
 
         // Show UI elements again
@@ -224,10 +217,9 @@ function scheduleRevealLayoutDebounced(delayMs = 120) {
         __zentrolRevealFsLayoutTimer = null;
         if (typeof Reveal === 'undefined') return;
         try {
+            // Viewport/fullscreen/resize: layout only. Do NOT call Reveal.sync() here —
+            // sync() re-runs full setup (Ne/Pe/We) and can re-enter synchronously and overflow the stack.
             Reveal.layout();
-            if (typeof Reveal.sync === 'function') {
-                Reveal.sync();
-            }
         } catch (e) {
             console.warn('[Zentrol] Reveal layout failed:', e);
         }
