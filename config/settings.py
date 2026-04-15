@@ -43,7 +43,13 @@ INSTALLED_APPS = [
     # Local apps
     'gestures',
     # 'analytics',
+    'lip2speech',
 ]
+
+# ── Lip2Speech settings ────────────────────────────────────────────────────────
+# Path to pre-trained model weights (.pt file).
+# Download from https://github.com/Chris10M/Lip2Speech and set this env var.
+LIP2SPEECH_WEIGHTS_PATH = env('LIP2SPEECH_WEIGHTS_PATH', default=None)
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

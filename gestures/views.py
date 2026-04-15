@@ -1,10 +1,9 @@
 import json
+import logging
 import shutil
 import subprocess
 import tempfile
 import uuid
-from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 
 import fitz
@@ -19,12 +18,10 @@ from django.utils import timezone
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
+from django.db.models import Avg, Count
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from urllib.parse import urlencode
-from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
@@ -34,6 +31,8 @@ from rest_framework.response import Response
 from .models import GestureLog, PresentationAsset, PresentationSession, UserProfile
 from .serializers import GestureLogSerializer
 from .throttles import GestureLogAnonThrottle
+
+logger = logging.getLogger(__name__)
 
 
 def _redirect_dashboard_preserving_workspace(request):
@@ -575,7 +574,6 @@ def api_log_gesture(request):
             try:
                 session = PresentationSession.objects.get(session_id=sid)
                 session.gesture_count += 1
-                session.last_activity = datetime.now()
                 session.save()
             except PresentationSession.DoesNotExist:
                 pass
@@ -585,40 +583,46 @@ def api_log_gesture(request):
     except (TypeError, ValueError) as e:
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
+        logger.exception("Unexpected error in api_log_gesture")
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # REST API Views
 class GestureLogViewSet(viewsets.ModelViewSet):
-    """REST API for gesture logs"""
-    queryset = GestureLog.objects.all().order_by('-created_at')
+    """REST API for gesture logs — scoped to the authenticated user."""
+    queryset = GestureLog.objects.none()  # overridden by get_queryset; kept for schema generation
     serializer_class = GestureLogSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    def get_queryset(self):
+        return GestureLog.objects.filter(user=self.request.user).order_by('-created_at')
+
     @action(detail=False, methods=['get'])
     def session_stats(self, request):
-        """Get statistics for a session"""
+        """Get statistics for a session."""
         session_id = request.query_params.get('session_id')
         if not session_id:
             return Response({'error': 'session_id required'}, status=400)
-        
-        logs = self.queryset.filter(session_id=session_id)
-        total = logs.count()
-        
-        stats = {
-            'total_gestures': total,
-            'gesture_types': {},
-            'avg_confidence': 0,
-            'avg_latency': 0,
-        }
-        
-        if total > 0:
-            for log in logs:
-                stats['gesture_types'][log.gesture_type] = stats['gesture_types'].get(log.gesture_type, 0) + 1
-            
-            stats['avg_confidence'] = sum(log.confidence for log in logs) / total
-            stats['avg_latency'] = sum(log.detection_time_ms for log in logs) / total
-        
-        return Response(stats)
+
+        qs = self.get_queryset().filter(session_id=session_id)
+
+        aggregates = qs.aggregate(
+            total=Count('id'),
+            avg_confidence=Avg('confidence'),
+            avg_latency=Avg('detection_time_ms'),
+        )
+        gesture_types = dict(
+            qs.values('gesture_type')
+              .annotate(count=Count('id'))
+              .values_list('gesture_type', 'count')
+        )
+
+        return Response({
+            'total_gestures': aggregates['total'],
+            'gesture_types': gesture_types,
+            'avg_confidence': aggregates['avg_confidence'] or 0,
+            'avg_latency': aggregates['avg_latency'] or 0,
+        })
 
 
 @extend_schema(

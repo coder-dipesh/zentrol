@@ -4,7 +4,13 @@ from .models import GestureLog, PresentationSession
 class GestureLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = GestureLog
-        fields = '__all__'
+        fields = [
+            'id', 'user', 'session_id',
+            'gesture_type', 'confidence', 'frame_count',
+            'hand_x', 'hand_y', 'hand_z',
+            'detection_time_ms', 'frame_processing_time_ms',
+            'screen_resolution', 'created_at',
+        ]
         read_only_fields = ['id', 'created_at']
 
 class PresentationSessionSerializer(serializers.ModelSerializer):

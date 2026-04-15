@@ -104,3 +104,20 @@ exceptiongroup==1.3.1
 # HTTP/Network libraries
 h11==0.16.0
 packaging==25.0
+
+# ============================================================================
+# Lip2Speech — ML dependencies
+# ============================================================================
+# Deep learning framework (CPU build; swap for torch with CUDA extras for GPU)
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Audio processing & Griffin-Lim reconstruction
+librosa>=0.10.0
+soundfile>=0.12.1
+
+# Video & image processing
+opencv-python-headless>=4.9.0
+
+# Face detection & lip landmark extraction
+mediapipe>=0.10.0
