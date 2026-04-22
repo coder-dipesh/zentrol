@@ -1,9 +1,8 @@
 """
 Helpers for building the PyLTI1p3 ToolConfDict from the database.
 
-PyLTI1p3 expects a dict keyed by issuer URL, with each value being a list
-of client configurations. Private keys are provided separately in a mapping
-from client_id → PEM string.
+Compatible with PyLTI1p3 >= 2.0 where ToolConfDict takes a single settings
+dict and private keys are set via set_private_key().
 """
 
 import logging
@@ -21,7 +20,6 @@ def get_tool_conf(issuer: str | None = None) -> ToolConfDict:
         issuer: If given, only load the platform matching this issuer URL.
                 Pass None to load all active platforms (needed for JWKS endpoint).
     """
-    # Import here to avoid AppRegistryNotReady errors at module load time
     from .models import LTITool
 
     qs = LTITool.objects.filter(is_active=True)
@@ -29,7 +27,6 @@ def get_tool_conf(issuer: str | None = None) -> ToolConfDict:
         qs = qs.filter(issuer=issuer)
 
     conf_dict: dict[str, list[dict]] = {}
-    private_keys: dict[str, str] = {}
 
     for tool in qs:
         conf_dict[tool.issuer] = [
@@ -42,7 +39,6 @@ def get_tool_conf(issuer: str | None = None) -> ToolConfDict:
                 "deployment_ids": tool.deployment_ids,
             }
         ]
-        private_keys[tool.client_id] = tool.tool_private_key
 
     if not conf_dict:
         logger.warning(
@@ -51,4 +47,14 @@ def get_tool_conf(issuer: str | None = None) -> ToolConfDict:
             f" for issuer={issuer!r}" if issuer else "",
         )
 
-    return ToolConfDict(conf_dict, private_keys)
+    tool_conf = ToolConfDict(conf_dict)
+
+    # PyLTI1p3 >= 2.0: private keys are set after construction
+    for tool in qs:
+        tool_conf.set_private_key(
+            tool.issuer,
+            tool.tool_private_key,
+            client_id=tool.client_id,
+        )
+
+    return tool_conf

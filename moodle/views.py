@@ -66,7 +66,11 @@ def lti_login(request):
             request.POST.get('target_link_uri')
             or request.GET.get('target_link_uri', '')
         )
-        return oidc_login.enable_check_cookies().redirect(target_link_uri)
+        # Do NOT call enable_check_cookies() — it falls back to a plain GET
+        # redirect when third-party cookies are blocked in Moodle's iframe,
+        # which breaks the state validation on the launch endpoint.
+        # State is persisted in DatabaseCache (DjangoCacheDataStorage), not cookies.
+        return oidc_login.redirect(target_link_uri)
     except LtiException as exc:
         logger.exception("LTI OIDC login failed: %s", exc)
         return JsonResponse({'error': 'LTI login failed', 'detail': str(exc)}, status=400)

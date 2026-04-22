@@ -1,0 +1,35 @@
+FROM php:8.2-apache
+
+# ── PHP extensions required by Moodle ────────────────────────────────────────
+RUN apt-get update && apt-get install -y \
+    libpng-dev libjpeg-dev libfreetype6-dev \
+    libxml2-dev libzip-dev libicu-dev \
+    unzip curl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        gd intl mysqli pdo_mysql \
+        soap zip opcache exif \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── PHP config for Moodle ─────────────────────────────────────────────────────
+RUN echo "max_input_vars = 5000" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "upload_max_filesize = 50M" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "post_max_size = 50M" >> /usr/local/etc/php/conf.d/moodle.ini
+
+# ── Download Moodle 4.4 source ────────────────────────────────────────────────
+RUN curl -L "https://github.com/moodle/moodle/archive/refs/tags/v4.4.0.tar.gz" \
+        -o /tmp/moodle.tar.gz \
+    && tar -xzf /tmp/moodle.tar.gz -C /var/www/html --strip-components=1 \
+    && rm /tmp/moodle.tar.gz \
+    && chown -R www-data:www-data /var/www/html
+
+# ── Moodledata directory ──────────────────────────────────────────────────────
+RUN mkdir -p /var/www/moodledata && chown -R www-data:www-data /var/www/moodledata
+
+# ── Entrypoint ────────────────────────────────────────────────────────────────
+COPY moodle-init.sh /usr/local/bin/moodle-init.sh
+RUN chmod +x /usr/local/bin/moodle-init.sh
+
+EXPOSE 80
+ENTRYPOINT ["/usr/local/bin/moodle-init.sh"]
