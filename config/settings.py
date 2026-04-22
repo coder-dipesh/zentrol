@@ -44,12 +44,39 @@ INSTALLED_APPS = [
     'gestures',
     # 'analytics',
     'lip2speech',
+    'moodle',
 ]
 
 # ── Lip2Speech settings ────────────────────────────────────────────────────────
 # Path to pre-trained model weights (.pt file).
 # Download from https://github.com/Chris10M/Lip2Speech and set this env var.
 LIP2SPEECH_WEIGHTS_PATH = env('LIP2SPEECH_WEIGHTS_PATH', default=None)
+
+# ── Moodle / LTI 1.3 settings ──────────────────────────────────────────────────
+# PyLTI1p3 uses Django's cache framework to persist OIDC state and nonces across
+# the two-step LTI handshake. The default LocMemCache is per-process and won't
+# work correctly in multi-worker deployments. Switch to DatabaseCache or Redis
+# for production.
+#
+# To create the database cache table (needed for LTI OIDC state):
+#   python manage.py createcachetable
+#
+# For Redis (recommended for production):
+#   pip install django-redis
+#   Set CACHE_BACKEND=django_redis.cache.RedisCache and CACHE_LOCATION=redis://...
+CACHES = {
+    'default': {
+        'BACKEND': env(
+            'CACHE_BACKEND',
+            default='django.core.cache.backends.db.DatabaseCache',
+        ),
+        'LOCATION': env('CACHE_LOCATION', default='zentrol_cache_table'),
+    }
+}
+
+# Base URL used when building absolute URLs in LTI config JSON.
+# Set this in production to your public domain, e.g. https://zentrol.example.com
+LTI_BASE_URL = env('LTI_BASE_URL', default='')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

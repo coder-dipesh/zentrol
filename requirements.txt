@@ -1,5 +1,5 @@
 # ============================================================================
-# Django Gesture Presentation System - Requirements
+# Django Gesture Presentation System + Moodle LTI Integration - Requirements
 # ============================================================================
 # 
 # Installation:
@@ -104,6 +104,15 @@ exceptiongroup==1.3.1
 # HTTP/Network libraries
 h11==0.16.0
 packaging==25.0
+
+# ============================================================================
+# Moodle / LTI 1.3 Integration
+# ============================================================================
+# LTI 1.3 tool provider (handles OIDC login, JWT validation, grade passback)
+PyLTI1p3>=1.3.2
+
+# RSA key generation (used by the generate_lti_keys management command)
+cryptography>=42.0.0
 
 # ============================================================================
 # Lip2Speech — ML dependencies
