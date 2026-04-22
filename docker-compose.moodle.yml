@@ -1,0 +1,54 @@
+# Local Moodle test environment for Zentrol LTI integration.
+#
+# Usage:
+#   docker compose -f docker-compose.moodle.yml up -d
+#
+# Moodle will be available at: http://localhost:8080
+# Admin login: admin / Admin1234!
+#
+# Takes ~3-5 minutes on first boot while Moodle installs.
+# Watch progress: docker compose -f docker-compose.moodle.yml logs -f moodle
+
+version: '3.8'
+
+services:
+  moodle-db:
+    image: bitnami/mariadb:10.6
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_DATABASE: moodle
+      MARIADB_USER: moodle
+      MARIADB_PASSWORD: moodlepass
+    volumes:
+      - moodle_db_data:/bitnami/mariadb
+
+  moodle:
+    image: bitnami/moodle:4.3
+    ports:
+      - "8080:8080"
+    environment:
+      MOODLE_DATABASE_TYPE: mariadb
+      MOODLE_DATABASE_HOST: moodle-db
+      MOODLE_DATABASE_PORT_NUMBER: 3306
+      MOODLE_DATABASE_USER: moodle
+      MOODLE_DATABASE_PASSWORD: moodlepass
+      MOODLE_DATABASE_NAME: moodle
+      MOODLE_USERNAME: admin
+      MOODLE_PASSWORD: Admin1234!
+      MOODLE_EMAIL: admin@local.test
+      MOODLE_SITE_NAME: "Zentrol Local Test"
+      # Allow Moodle to call back to the host machine (Django)
+      MOODLE_HOST: localhost:8080
+    depends_on:
+      - moodle-db
+    volumes:
+      - moodle_data:/bitnami/moodle
+      - moodle_moodledata:/bitnami/moodledata
+    # host.docker.internal lets the Moodle container reach Django on your Mac
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  moodle_db_data:
+  moodle_data:
+  moodle_moodledata:

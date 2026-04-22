@@ -169,7 +169,11 @@ def lti_config(request):
     Paste the URL of this endpoint into Moodle's "Tool URL" field when
     registering Zentrol as an External Tool to auto-fill most settings.
     """
-    base = request.build_absolute_uri('/').rstrip('/')
+    # Use LTI_BASE_URL when set (needed for local Docker testing where Moodle
+    # reaches Django via host.docker.internal, not localhost).
+    from django.conf import settings as dj_settings
+    lti_base = getattr(dj_settings, 'LTI_BASE_URL', '').rstrip('/')
+    base = lti_base or request.build_absolute_uri('/').rstrip('/')
     config = {
         "title": "Zentrol — Gesture Presentation",
         "description": (
