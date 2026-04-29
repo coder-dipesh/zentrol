@@ -118,8 +118,13 @@ cryptography>=42.0.0
 # Lip2Speech — ML dependencies
 # ============================================================================
 # Deep learning framework (CPU build; swap for torch with CUDA extras for GPU)
-torch>=2.1.0
-torchvision>=0.16.0
+# NOTE: facenet-pytorch pins torch ~2.2; keep these versions in sync.
+torch>=2.2.0,<2.3.0
+torchvision>=0.17.0,<0.18.0
+torchaudio>=2.2.0,<2.3.0
+
+# Face recognition backbone used by Lip2Speech FaceRecognizer module
+facenet-pytorch>=2.6.0
 
 # Audio processing & Griffin-Lim reconstruction
 librosa>=0.10.0
