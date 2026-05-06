@@ -15,6 +15,7 @@ urlpatterns = [
     # path('analytics/', include('analytics.urls')),
     path('lip2speech/', include('lip2speech.urls')),
     path('', include('gestures.urls')),  # Main app URLs
+    path('moodle/', include('moodle.urls', namespace='moodle')),
 ]
 
 # OpenAPI / Swagger — off in production unless SPECTACULAR_PUBLIC=True (or DEBUG).

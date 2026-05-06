@@ -6,12 +6,12 @@ import os
 from pathlib import Path
 import environ
 
-# Initialize environment variables
-env = environ.Env()
-env.read_env()
-
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Initialize environment variables — explicitly point at the project-root .env
+env = environ.Env()
+env.read_env(BASE_DIR / '.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
@@ -23,7 +23,9 @@ DEBUG = env.bool('DEBUG', default=True)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
     'localhost',
     '127.0.0.1',
-    '.ngrok-free.app',  # ngrok static domain tunnels (subdomain wildcard)
+    '.ngrok-free.app',       # ngrok static domain tunnels (subdomain wildcard)
+    '.ngrok-free.dev',       # ngrok free dev tunnels
+    'host.docker.internal',  # Docker → host (local Moodle LTI testing)
 ])
 
 # Application definition
@@ -44,12 +46,47 @@ INSTALLED_APPS = [
     'gestures',
     # 'analytics',
     'lip2speech',
+    'moodle',
 ]
 
 # ── Lip2Speech settings ────────────────────────────────────────────────────────
 # Path to pre-trained model weights (.pt file).
 # Download from https://github.com/Chris10M/Lip2Speech and set this env var.
 LIP2SPEECH_WEIGHTS_PATH = env('LIP2SPEECH_WEIGHTS_PATH', default=None)
+
+# ── Moodle / LTI 1.3 settings ──────────────────────────────────────────────────
+# PyLTI1p3 uses Django's cache framework to persist OIDC state and nonces across
+# the two-step LTI handshake. The default LocMemCache is per-process and won't
+# work correctly in multi-worker deployments. Switch to DatabaseCache or Redis
+# for production.
+#
+# To create the database cache table (needed for LTI OIDC state):
+#   python manage.py createcachetable
+#
+# For Redis (recommended for production):
+#   pip install django-redis
+#   Set CACHE_BACKEND=django_redis.cache.RedisCache and CACHE_LOCATION=redis://...
+CACHES = {
+    'default': {
+        'BACKEND': env(
+            'CACHE_BACKEND',
+            default='django.core.cache.backends.db.DatabaseCache',
+        ),
+        'LOCATION': env('CACHE_LOCATION', default='zentrol_cache_table'),
+    }
+}
+
+# Base URL used when building absolute URLs in LTI config JSON.
+# Set this in production to your public domain, e.g. https://zentrol.example.com
+LTI_BASE_URL = env('LTI_BASE_URL', default='')
+
+# ── Reverse-proxy / ngrok SSL header ──────────────────────────────────────────
+# ngrok (and most reverse proxies) terminate TLS and forward requests as HTTP
+# to Django. Without this setting, request.is_secure() returns False and
+# PyLTI1p3's state cookie is set WITHOUT SameSite=None, which causes browsers
+# to drop it on the cross-site POST from Moodle → /moodle/lti/launch/.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -177,10 +214,26 @@ CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
 
 CORS_ALLOW_CREDENTIALS = True
 
+# ── LTI / iframe cookie settings ───────────────────────────────────────────────
+# LTI 1.3 runs inside a Moodle iframe (cross-site context). Modern browsers
+# block cookies that don't have SameSite=None; Secure. Set these so that:
+#   • Django session cookie is forwarded on cross-site POSTs from Moodle
+#   • CSRF cookie is readable by the launch form POST
+# In local dev over HTTP (ngrok provides HTTPS so Secure=True is fine).
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
+
+# Allow Moodle to embed Zentrol pages in an iframe.
+# XFrameOptionsMiddleware default is SAMEORIGIN which blocks cross-origin iframes.
+X_FRAME_OPTIONS = 'ALLOWALL'
+
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'https://*.ngrok-free.app',
+    'https://*.ngrok-free.dev',
 ])
 
 # REST Framework
