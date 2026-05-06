@@ -1,0 +1,256 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lip to Speech | Zentrol</title>
+
+  <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            zentrol: {
+              navy:  { 500:'#0F1E2E', 600:'#0D1A28', 700:'#0B1622' },
+              teal:  { 50:'#E6FAF8', 100:'#C1F0EB', 500:'#1FB6AA', 600:'#1AA096', 700:'#168A82' },
+              gray:  { 50:'#F9FAFB', 100:'#F4F6F8', 200:'#E5E7EB', 300:'#D1D5DB',
+                       400:'#9CA3AF', 500:'#6B7280', 600:'#4B5563' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="min-h-screen bg-zentrol-gray-100 text-zentrol-navy-500">
+
+  <!-- Background accents -->
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-zentrol-teal-100/50 blur-3xl"></div>
+    <div class="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-zentrol-navy-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-40 border-b border-zentrol-gray-200 bg-white/80 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      <a href="/" class="flex items-center gap-3">
+        <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-9 w-9">
+        <span class="text-lg font-semibold tracking-tight">Zentrol</span>
+      </a>
+      <nav class="hidden items-center gap-6 md:flex text-sm">
+        <a href="/" class="text-zentrol-gray-600 hover:text-zentrol-navy-500">Home</a>
+        <a href="/presentation/" class="text-zentrol-gray-600 hover:text-zentrol-navy-500">Presentation</a>
+        <span class="font-semibold text-zentrol-teal-500">Lip to Speech</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-10 text-center">
+      <div class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-zentrol-gray-600 shadow-sm mb-4">
+        <svg class="h-4 w-4 text-zentrol-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+        AI-powered speech synthesis
+      </div>
+      <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Lip to Speech</h1>
+      <p class="mt-3 max-w-2xl mx-auto text-zentrol-gray-600">
+        Upload a silent video and our AI will synthesise speech from lip movements —
+        inferring the speaker's voice from their facial characteristics.
+      </p>
+    </div>
+
+    <!-- Upload card -->
+    <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-8 shadow-sm">
+
+      <!-- Drop zone -->
+      <div id="dropZone"
+           class="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed
+                  border-zentrol-gray-300 bg-zentrol-gray-50 px-6 py-14 text-center
+                  transition-colors hover:border-zentrol-teal-500 hover:bg-zentrol-teal-50 cursor-pointer">
+        <svg class="h-12 w-12 text-zentrol-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <div>
+          <p class="font-semibold text-zentrol-navy-500">Drag &amp; drop a video here</p>
+          <p class="mt-1 text-sm text-zentrol-gray-500">or click to browse — MP4, WebM, MOV · max 50 MB</p>
+        </div>
+        <input id="videoInput" type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo"
+               class="hidden" />
+      </div>
+
+      <!-- Selected file info -->
+      <div id="fileInfo" class="mt-4 hidden rounded-lg bg-zentrol-gray-50 px-4 py-3 text-sm text-zentrol-gray-600 flex items-center gap-3">
+        <svg class="h-5 w-5 text-zentrol-teal-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+        <span id="fileInfoText"></span>
+      </div>
+
+      <!-- Video preview -->
+      <video id="videoPreview" class="mt-4 w-full rounded-lg hidden max-h-64 object-contain bg-black" controls muted></video>
+
+      <!-- Synthesise button -->
+      <button id="synthesiseBtn"
+              class="mt-6 w-full rounded-lg bg-zentrol-teal-500 px-6 py-3 text-sm font-semibold text-white
+                     shadow-sm transition hover:bg-zentrol-teal-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled>
+        Synthesise Speech
+      </button>
+    </div>
+
+    <!-- Progress / status -->
+    <div id="statusCard" class="hidden mt-6 rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div id="statusSpinner"
+             class="h-5 w-5 animate-spin rounded-full border-2 border-zentrol-teal-500 border-t-transparent"></div>
+        <p id="statusText" class="text-sm font-medium text-zentrol-navy-500">Processing video…</p>
+      </div>
+      <div id="progressBar" class="mt-3 h-1.5 w-full rounded-full bg-zentrol-gray-200 overflow-hidden">
+        <div id="progressFill" class="h-full w-0 rounded-full bg-zentrol-teal-500 transition-all duration-300"></div>
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div id="resultCard" class="hidden mt-6 rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm">
+      <h2 class="font-semibold text-zentrol-navy-500 mb-4">Synthesised Speech</h2>
+
+      <!-- Audio player -->
+      <audio id="audioPlayer" controls class="w-full rounded-lg"></audio>
+
+      <!-- Stats grid -->
+      <dl id="statsGrid" class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm"></dl>
+
+      <!-- Download -->
+      <a id="downloadLink" href="#" download="lip2speech.wav"
+         class="mt-5 inline-flex items-center gap-2 rounded-lg border border-zentrol-gray-200
+                px-4 py-2 text-sm font-semibold hover:bg-zentrol-gray-50 transition">
+        <svg class="h-4 w-4 text-zentrol-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Download WAV
+      </a>
+
+      <!-- Try again -->
+      <button id="resetBtn"
+              class="mt-3 ml-3 inline-flex items-center gap-2 rounded-lg border border-zentrol-gray-200
+                     px-4 py-2 text-sm font-semibold hover:bg-zentrol-gray-50 transition">
+        Try another video
+      </button>
+    </div>
+
+    <!-- Error card -->
+    <div id="errorCard" class="hidden mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 shadow-sm">
+      <div class="flex items-start gap-3">
+        <svg class="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="font-semibold text-red-800">Synthesis failed</p>
+          <p id="errorText" class="mt-1 text-sm text-red-700"></p>
+        </div>
+      </div>
+      <button id="errorResetBtn"
+              class="mt-4 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold
+                     text-red-700 hover:bg-red-100 transition">
+        Try again
+      </button>
+    </div>
+
+    <!-- Architecture info -->
+    <section class="mt-14">
+      <h2 class="text-xl font-semibold tracking-tight">How it works</h2>
+      <p class="mt-2 text-sm text-zentrol-gray-600 max-w-2xl">
+        Based on <em>"Show Me Your Face, And I'll Tell You How You Speak"</em>
+        (Millerdurai, Abdel Khaliq, Ulrich — Saarland University).
+      </p>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {% for step in steps %}
+        <div class="rounded-xl border border-zentrol-gray-200 bg-white p-5 shadow-sm">
+          <div class="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-zentrol-teal-50 text-zentrol-teal-600 font-bold text-sm">
+            {{ forloop.counter }}
+          </div>
+          <p class="font-semibold text-sm">{{ step.title }}</p>
+          <p class="mt-1 text-xs text-zentrol-gray-500">{{ step.desc }}</p>
+        </div>
+        {% empty %}
+        <!-- Static fallback -->
+        <div class="rounded-xl border border-zentrol-gray-200 bg-white p-5 shadow-sm">
+          <div class="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-zentrol-teal-50 text-zentrol-teal-600 font-bold text-sm">1</div>
+          <p class="font-semibold text-sm">Speaker Encoder</p>
+          <p class="mt-1 text-xs text-zentrol-gray-500">First frame → 256-dim voice identity embedding (age, gender, ethnicity).</p>
+        </div>
+        <div class="rounded-xl border border-zentrol-gray-200 bg-white p-5 shadow-sm">
+          <div class="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-zentrol-teal-50 text-zentrol-teal-600 font-bold text-sm">2</div>
+          <p class="font-semibold text-sm">Lip Encoder</p>
+          <p class="mt-1 text-xs text-zentrol-gray-500">3-D convolutions over lip-ROI crops capture articulation over time.</p>
+        </div>
+        <div class="rounded-xl border border-zentrol-gray-200 bg-white p-5 shadow-sm">
+          <div class="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-zentrol-teal-50 text-zentrol-teal-600 font-bold text-sm">3</div>
+          <p class="font-semibold text-sm">LSTM Decoder</p>
+          <p class="mt-1 text-xs text-zentrol-gray-500">Auto-regressive Tacotron-style decoder generates mel spectrogram frames.</p>
+        </div>
+        <div class="rounded-xl border border-zentrol-gray-200 bg-white p-5 shadow-sm">
+          <div class="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-zentrol-teal-50 text-zentrol-teal-600 font-bold text-sm">4</div>
+          <p class="font-semibold text-sm">Griffin-Lim</p>
+          <p class="mt-1 text-xs text-zentrol-gray-500">Phase reconstruction converts the mel spectrogram to a raw WAV waveform.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Recent inferences -->
+    {% if recent_inferences %}
+    <section class="mt-14">
+      <h2 class="text-xl font-semibold tracking-tight">Recent syntheses</h2>
+      <div class="mt-4 overflow-hidden rounded-xl border border-zentrol-gray-200 bg-white shadow-sm">
+        <table class="w-full text-sm">
+          <thead class="bg-zentrol-gray-50 text-left text-xs font-semibold uppercase text-zentrol-gray-500">
+            <tr>
+              <th class="px-4 py-3">ID</th>
+              <th class="px-4 py-3">Frames</th>
+              <th class="px-4 py-3">Duration</th>
+              <th class="px-4 py-3">Time</th>
+              <th class="px-4 py-3">Created</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zentrol-gray-100">
+            {% for inf in recent_inferences %}
+            <tr class="hover:bg-zentrol-gray-50">
+              <td class="px-4 py-3 font-mono text-xs text-zentrol-gray-500">{{ inf.id|stringformat:"s"|slice:":8" }}…</td>
+              <td class="px-4 py-3">{{ inf.num_frames }}</td>
+              <td class="px-4 py-3">{{ inf.duration_seconds|floatformat:2 }}s</td>
+              <td class="px-4 py-3">{{ inf.processing_time_ms|floatformat:0 }}ms</td>
+              <td class="px-4 py-3 text-zentrol-gray-500">{{ inf.created_at|date:"M d, H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="mt-16 border-t border-zentrol-gray-200 bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex items-center justify-between text-sm text-zentrol-gray-500">
+      <span>© 2026 Zentrol</span>
+      <span>Lip2Speech — Saarland University research implementation</span>
+    </div>
+  </footer>
+
+  <script src="{% static 'js/lip2speech.js' %}"></script>
+</body>
+</html>

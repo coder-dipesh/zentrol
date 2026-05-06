@@ -268,20 +268,7 @@ class PresentationLogger {
     }
 
     getCSRFToken() {
-        // Try meta tag
-        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-        if (token) return token;
-
-        // Try cookie
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            const [key, value] = cookie.trim().split('=');
-            if (key === 'csrftoken') {
-                return decodeURIComponent(value);
-            }
-        }
-
-        return '';
+        return getCsrfToken();
     }
 
     getSessionId() {
@@ -517,17 +504,17 @@ class PresentationController {
     handleGesture(gestureData) {
         const { gesture, confidence, metrics } = gestureData;
 
-        console.log(`📱 Gesture: ${gesture} (${Math.round(confidence * 100)}%)`, metrics);
+        console.debug(`📱 Gesture: ${gesture} (${Math.round(confidence * 100)}%)`, metrics);
 
         // Get action from mapping (prefer live object on window for SPA overrides)
         const map = window.GESTURE_ACTION_MAP || GESTURE_ACTION_MAP;
         const actionName = map[gesture];
         if (!actionName) {
-            console.log(`⚠️ Unknown gesture: ${gesture}. Available gestures:`, Object.keys(map));
+            console.debug(`⚠️ Unknown gesture: ${gesture}. Available gestures:`, Object.keys(map));
             return;
         }
 
-        console.log(`🎯 Executing action: ${actionName} for gesture: ${gesture}`);
+        console.debug(`🎯 Executing action: ${actionName} for gesture: ${gesture}`);
 
         // Execute action
         const action = this[actionName];
@@ -572,7 +559,7 @@ class PresentationController {
             method: 'gesture'
         });
         
-        console.log('➡️ Next slide');
+        console.debug('➡️ Next slide');
     }
 
     previousSlide() {
@@ -584,11 +571,11 @@ class PresentationController {
             method: 'gesture'
         });
         
-        console.log('⬅️ Previous slide');
+        console.debug('⬅️ Previous slide');
     }
 
     resetPresentation() {
-        console.log('🔄 resetPresentation() called');
+        console.debug('🔄 resetPresentation() called');
         
         if (!window.Reveal) {
             console.error('❌ Reveal.js not available!');
@@ -601,7 +588,7 @@ class PresentationController {
             this.logger.logAction('reset_presentation');
             
             this.feedback.showGestureFeedback('Reset to Start!', '🔄');
-            console.log('✅ Reset to first slide successful');
+            console.debug('✅ Reset to first slide successful');
         } catch (error) {
             console.error('❌ Error resetting presentation:', error);
         }
@@ -614,7 +601,7 @@ class PresentationController {
     // Real Fullscreen API is used for button clicks
 
     async toggleFullscreen() {
-        console.log('🖐️ Open Palm - Toggle fullscreen (gesture)');
+        console.debug('🖐️ Open Palm - Toggle fullscreen (gesture)');
 
         // Use fake fullscreen for gestures (bypasses browser security restriction)
         const wasFullscreen = this.fullscreen.isFullscreen();
@@ -639,17 +626,17 @@ class PresentationController {
             entering: isFullscreenNow && !wasFullscreen
         });
 
-        console.log(isFullscreenNow ? '✅ Entered fake fullscreen' : '✅ Exited fake fullscreen');
+        console.debug(isFullscreenNow ? '✅ Entered fake fullscreen' : '✅ Exited fake fullscreen');
     }
 
     async exitFullscreen() {
         // Only exit if currently in fullscreen (real or fake)
         if (!this.fullscreen.isFullscreen()) {
-            console.log('✊ Fist detected but not in fullscreen → ignored');
+            console.debug('✊ Fist detected but not in fullscreen → ignored');
             return;
         }
 
-        console.log('✊ Fist - Exiting fullscreen');
+        console.debug('✊ Fist - Exiting fullscreen');
 
         // Try real fullscreen API first (in case we're in real fullscreen)
         if (this.fullscreen.fakeFullscreenActive) {
@@ -821,14 +808,14 @@ window.PresentationController = PresentationController;
 // ============================================================================
 
 function initPresentationController() {
-    console.log('🎬 Initializing Presentation Controller...');
+    console.debug('🎬 Initializing Presentation Controller...');
     if (window.presentationController) return;
 
     window.presentationController = new PresentationController();
 
     if (window.Reveal) {
         Reveal.addEventListener('ready', () => {
-            console.log('✅ Presentation Controller ready');
+            console.debug('✅ Presentation Controller ready');
             window.presentationController.updateFullscreenUI(false);
             window.presentationController.updateGestureGuide(false);
         });
@@ -856,7 +843,7 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
             }
         });
         document.dispatchEvent(event);
-        console.log(`🧪 Test gesture: ${gestureName}`);
+        console.debug(`🧪 Test gesture: ${gestureName}`);
     };
 
     window.testAllGestures = function() {
@@ -868,5 +855,5 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
         });
     };
 
-    console.log('🧪 Debug mode: Use testGesture("gesture_name") or testAllGestures()');
+    console.debug('🧪 Debug mode: Use testGesture("gesture_name") or testAllGestures()');
 }

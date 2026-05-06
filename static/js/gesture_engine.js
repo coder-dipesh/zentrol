@@ -534,17 +534,8 @@ class GestureEngine {
         const threshold = Math.floor(this.bufferSize * 0.75);
         const result = maxCount >= threshold ? consensus : 'unknown';
         
-        // Debug logging for fist gesture
-        if (consensus === 'fist' || this.gestureBuffer.includes('fist')) {
-            console.log(`🔍 [fist consensus]`, {
-                buffer: this.gestureBuffer,
-                counts,
-                maxCount,
-                threshold,
-                consensus,
-                result,
-                bufferSize: this.bufferSize
-            });
+        if (this.debug && (consensus === 'fist' || this.gestureBuffer.includes('fist'))) {
+            console.debug(`🔍 [fist consensus]`, { buffer: this.gestureBuffer, counts, maxCount, threshold, consensus, result });
         }
         
         return result;
@@ -563,34 +554,10 @@ class GestureEngine {
             timeSinceLastGesture >= this.options.debounceTime
         );
 
-        // Debug logging for fist gesture specifically
-        if (this.currentGesture === 'fist') {
-            console.log(`🔍 [fist check]`, {
-                gesture: this.currentGesture,
-                confidence: this.gestureConfidence,
-                minConfidence: this.options.minGestureConfidence,
-                frames: this.gestureFrames,
-                minFrames: this.options.minFramesForGesture,
-                timeSinceLast: timeSinceLastGesture,
-                debounceTime: this.options.debounceTime,
-                canTrigger,
-                confidenceMet: this.gestureConfidence >= this.options.minGestureConfidence,
-                framesMet: this.gestureFrames >= this.options.minFramesForGesture,
-                debounceMet: timeSinceLastGesture >= this.options.debounceTime
-            });
-        }
-
-        // Debug logging for point_up specifically
-        if (this.currentGesture === 'point_up' && this.debug) {
-            console.log(`🔍 [point_up check]`, {
-                gesture: this.currentGesture,
-                confidence: this.gestureConfidence,
-                minConfidence: this.options.minGestureConfidence,
-                frames: this.gestureFrames,
-                minFrames: this.options.minFramesForGesture,
-                timeSinceLast: timeSinceLastGesture,
-                debounceTime: this.options.debounceTime,
-                canTrigger
+        if (this.debug) {
+            console.debug(`🔍 [${this.currentGesture} check]`, {
+                confidence: this.gestureConfidence, frames: this.gestureFrames,
+                timeSinceLast: timeSinceLastGesture, canTrigger,
             });
         }
 
@@ -605,11 +572,6 @@ class GestureEngine {
      */
     triggerGesture(gesture) {
         this.log('info', `🎯 Gesture detected: ${gesture} (${Math.round(this.gestureConfidence * 100)}%)`);
-        console.log(`🎯 [GestureEngine] Triggering gesture: ${gesture}`, {
-            confidence: this.gestureConfidence,
-            frames: this.gestureFrames,
-            buffer: this.gestureBuffer
-        });
 
         // Dispatch event
         const event = new CustomEvent('gestureDetected', {
@@ -621,7 +583,6 @@ class GestureEngine {
                 metrics: this.metrics.getMetrics()
             }
         });
-        console.log(`📤 [GestureEngine] Dispatching gestureDetected event:`, event.detail);
         document.dispatchEvent(event);
 
         // Visual feedback
@@ -795,41 +756,9 @@ class GestureEngine {
         }
     }
 
-    /**
-     * Get CSRF token with fallback
-     * @returns {string}
-     */
+    /** @returns {string} */
     getCSRFToken() {
-        // Try meta tag first
-        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-        
-        if (token) return token;
-
-        // Try cookie
-        const cookieToken = this.getCSRFFromCookie();
-        if (cookieToken) return cookieToken;
-
-        // Log warning
-        this.log('warn', 'CSRF token not found');
-        return '';
-    }
-
-    /**
-     * Get CSRF token from cookie
-     * @returns {string|null}
-     */
-    getCSRFFromCookie() {
-        const name = 'csrftoken';
-        const cookies = document.cookie.split(';');
-        
-        for (let cookie of cookies) {
-            const [key, value] = cookie.trim().split('=');
-            if (key === name) {
-                return decodeURIComponent(value);
-            }
-        }
-        
-        return null;
+        return getCsrfToken();
     }
 
     /**
