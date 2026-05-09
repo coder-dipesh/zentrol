@@ -13,3 +13,8 @@ htmlcov/
 # Same rule as .gitignore: anchor so ``static/media/`` ships with the bundle.
 /media/
 db.sqlite3
+
+# Demo-only assets (~22 MB) — keep in git for VM/docker deploys; omit from serverless bundle.
+# Server templates use IS_SERVERLESS to skip hero video; presentation thumbnails may 404 on Vercel.
+static/media/slides/
+static/media/video/

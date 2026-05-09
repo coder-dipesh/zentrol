@@ -382,9 +382,10 @@
                     detecting
                   </span>
                 </figcaption>
-                <div id="hero-media" class="hero-media mt-5">
+                <div id="hero-media" class="hero-media mt-5{% if IS_SERVERLESS %} is-ready{% endif %}">
                   <!-- Poster under video; video autoplays muted; pause off-screen in JS -->
                   <img src="{% static 'media/images/hero-gesture.svg' %}" alt="" aria-hidden="true" />
+                  {% if not IS_SERVERLESS %}
                   <video
                     id="hero-video"
                     class="hero-video"
@@ -398,6 +399,7 @@
                       Your browser doesn't support inline video.
                     </p>
                   </video>
+                  {% endif %}
                 </div>
                 <div class="mt-5 grid grid-cols-3 gap-3 border-t border-line pt-5 text-[12px] text-ink2">
                   <div>
