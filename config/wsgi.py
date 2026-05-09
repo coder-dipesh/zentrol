@@ -9,9 +9,17 @@ https://docs.djangoproject.com/en/5.1/howto/deployment/wsgi/
 
 import os
 
-from django.core.wsgi import get_wsgi_application
+import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+django.setup()
+
+from config.serverless_db import ensure_serverless_schema
+
+ensure_serverless_schema()
+
+from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 

@@ -3,11 +3,19 @@ ASGI config for gesture_presentation project.
 It exposes the ASGI callable as a module-level variable named ``application``.
 """
 import os
-from django.core.asgi import get_asgi_application
+
+import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-# Get ASGI application
+django.setup()
+
+from config.serverless_db import ensure_serverless_schema
+
+ensure_serverless_schema()
+
+from django.core.asgi import get_asgi_application
+
 application = get_asgi_application()
 
 # For future WebSocket support with Django Channels:

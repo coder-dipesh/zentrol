@@ -83,7 +83,9 @@ The repo ships **`requirements-vercel.txt`** (installed via **`vercel.json`** �
 
 - **`LIP2SPEECH_ENABLED`** defaults **`False`** when **`VERCEL=1`** — the `lip2speech` Django app and `/lip2speech/*` routes are not loaded.
 - **`.vercelignore`** drops the `lip2speech/` package directory from the uploaded source (you cannot enable Lip2Speech on Vercel without switching to full `requirements.txt` and a hosting tier that fits the bundle — generally use a separate GPU/CPU service instead).
-- Provision **Postgres** (`DATABASE_URL`) in the Vercel dashboard or Marketplace; treat SQLite on `/tmp` as dev-only.
+- **`DATABASE_URL`** is **required** and must be **PostgreSQL** (`postgres://` or `postgresql://`). Django raises at startup if it is missing or SQLite — serverless filesystems are not suitable for SQLite-backed auth.
+- Set **`DATABASE_URL`**, **`SECRET_KEY`** (48+ chars), and **`DEBUG=False`** (plus hosts/CSRF) in the Vercel project environment so **build** can run migrations.
+- **`vercel.json`** → **`buildCommand`** runs **`collectstatic`**, **`migrate --noinput`**, and **`createcachetable`** when Vercel actually executes custom builds — Python deployments sometimes omit this step, so **`config/serverless_db.py`** also runs **`migrate`** + **`createcachetable`** on each serverless cold start (disable with **`SKIP_SERVERLESS_STARTUP_MIGRATE=True`** only if you always migrate elsewhere).
 
 ---
 
