@@ -5,4 +5,7 @@ from django.conf import settings
 
 def deployment(_request):
     """Expose serverless flag for conditional UI (smaller Vercel bundles)."""
-    return {'IS_SERVERLESS': getattr(settings, 'IS_SERVERLESS', False)}
+    return {
+        'IS_SERVERLESS': getattr(settings, 'IS_SERVERLESS', False),
+        'hero_intro_video_url': getattr(settings, 'HERO_INTRO_VIDEO_URL', '') or '',
+    }

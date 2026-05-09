@@ -382,10 +382,24 @@
                     detecting
                   </span>
                 </figcaption>
-                <div id="hero-media" class="hero-media mt-5{% if IS_SERVERLESS %} is-ready{% endif %}">
+                <div id="hero-media" class="hero-media mt-5{% if IS_SERVERLESS and not hero_intro_video_url %} is-ready{% endif %}">
                   <!-- Poster under video; video autoplays muted; pause off-screen in JS -->
                   <img src="{% static 'media/images/hero-gesture.svg' %}" alt="" aria-hidden="true" />
-                  {% if not IS_SERVERLESS %}
+                  {% if hero_intro_video_url %}
+                  <video
+                    id="hero-video"
+                    class="hero-video"
+                    src="{{ hero_intro_video_url }}"
+                    poster="{% static 'media/images/hero-gesture.svg' %}"
+                    autoplay muted loop playsinline preload="metadata"
+                    disablepictureinpicture disableremoteplayback
+                    aria-label="Zentrol product demo — a hand gesture advances a slide while narration speaks"
+                  >
+                    <p class="absolute inset-0 grid place-items-center px-4 text-center text-[13px] text-ink2">
+                      Your browser doesn't support inline video.
+                    </p>
+                  </video>
+                  {% elif not IS_SERVERLESS %}
                   <video
                     id="hero-video"
                     class="hero-video"

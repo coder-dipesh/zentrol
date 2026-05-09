@@ -111,7 +111,7 @@ See [.env.example](.env.example) for all tunables.
 
 - **`vercel.json`** runs **`pip install -r requirements-vercel.txt`** — no PyTorch/Lip2Speech/**PyMuPDF**/Algolia client by default (stays under Vercel’s Python bundle limit; server-side `.pptx`→slides remains unsupported).
 - **`VERCEL=1`** is set by Vercel; **`LIP2SPEECH_ENABLED`** defaults to **`False`** so the `lip2speech` app and routes are omitted (see [`config/settings.py`](config/settings.py)).
-- **`.vercelignore`** excludes the `lip2speech/` source tree and **demo `static/media/slides/` + `intro.mp4`** from the upload; production VMs/docker keep shipping full assets from git.
+- **`.vercelignore`** excludes the `lip2speech/` source tree and **demo `static/media/slides/` + bundled `intro.mp4`** from the upload; set **`HERO_INTRO_VIDEO_URL`** (e.g. Supabase Storage public URL) so the home hero still plays video on Vercel.
 - **PostgreSQL `DATABASE_URL` is required** (SQLite is rejected on serverless). **`vercel.json`** runs **`migrate`** at build when the platform honors **`buildCommand`**; **`config/serverless_db.py`** also migrates on each cold start so auth tables exist if builds skipped **`migrate`** (set **`SKIP_SERVERLESS_STARTUP_MIGRATE=True`** only when migrations always run in CI/release).
 - **Server-side `.pptx`** conversion needs LibreOffice — still unavailable on Vercel; use client-side deck flows or an external worker.
 
