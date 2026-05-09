@@ -23,17 +23,16 @@ from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Avg, Count
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST, require_GET
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from . import algolia
 from .models import GestureLog, PresentationAsset, PresentationSession, UserProfile
 from .serializers import GestureLogSerializer
 from .throttles import GestureLogAnonThrottle
@@ -225,12 +224,29 @@ def dashboard_view(request):
 
     user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
     user_sessions = _get_user_active_sessions(request)
+
+    # Algolia config for the ⌘K search modal. The secured search key is
+    # scoped to this user so the browser can only retrieve their own decks
+    # (see gestures/algolia.py::secured_search_key_for). When Algolia is
+    # disabled or key minting fails, the template silently falls back to
+    # the static "first 6 decks" list rendered from `assets`.
+    algolia_config = None
+    if algolia.is_enabled():
+        secured_key = algolia.secured_search_key_for(request.user.pk)
+        if secured_key:
+            algolia_config = {
+                'app_id': settings.ALGOLIA_APP_ID,
+                'index_name': settings.ALGOLIA_INDEX_NAME,
+                'search_key': secured_key,
+            }
+
     return render(request, 'dashboard.html', {
         'assets': assets,
         'view_mode': view_mode,
         'active_filter': active_filter,
         'user_profile': user_profile,
         'user_sessions': user_sessions,
+        'algolia': algolia_config,
     })
 
 
@@ -435,10 +451,6 @@ def presentation_view(request):
         'initial_slides': initial_slides,
         'initial_asset_title': initial_asset_title,
     })
-
-
-def test_view(request):
-    return render(request, 'test_mediapipe.html')
 
 
 @login_required

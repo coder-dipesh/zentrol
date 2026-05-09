@@ -4,30 +4,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zentrol | Gesture Controlled Presentation</title>
+  <title>Zentrol — Present without a remote</title>
+  <meta name="description" content="Upload a PPTX, then control it with hand gestures while every slide is read aloud. Runs in the browser. No remote, no extra hardware." />
 
   <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
   <link rel="apple-touch-icon" href="{% static 'media/logo/zentrol-icon.svg' %}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: {
+            sans: ['"Inter Tight"', 'system-ui', 'sans-serif'],
+            serif: ['"Instrument Serif"', 'serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
           colors: {
+            paper:     '#F4F1EA',
+            paperDeep: '#EDE8DD',
+            ink:       '#1B1A18',
+            ink2:      '#3C3A35',
+            mute:      '#86837C',
+            line:      '#D9D4C7',
+            sand:      '#FBF9F4',
+            accent:    '#1F8D87',
+            accent2:   '#176A66',
+            accentSoft:'#DCE9E7',
             zentrol: {
-              navy: {
-                50:'#E6EBF0',100:'#C0CAD8',200:'#99A9C0',300:'#7288A8',400:'#4B6790',
-                500:'#0F1E2E',600:'#0D1A28',700:'#0B1622',800:'#09121C',900:'#070E16'
-              },
-              teal: {
-                50:'#E6FAF8',100:'#C1F0EB',200:'#9CE6DE',300:'#77DCD1',400:'#52D2C4',
-                500:'#1FB6AA',600:'#1AA096',700:'#168A82',800:'#11746E',900:'#0D5E5A'
-              },
-              gray: {
-                50:'#F9FAFB',100:'#F4F6F8',200:'#E5E7EB',300:'#D1D5DB',400:'#9CA3AF',
-                500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2933',900:'#111827'
-              }
+              navy: { 50:'#E6EBF0',100:'#C0CAD8',200:'#99A9C0',300:'#7288A8',400:'#4B6790',500:'#0F1E2E',600:'#0D1A28',700:'#0B1622',800:'#09121C',900:'#070E16' },
+              teal: { 50:'#E6FAF8',100:'#C1F0EB',200:'#9CE6DE',300:'#77DCD1',400:'#52D2C4',500:'#1FB6AA',600:'#1AA096',700:'#168A82',800:'#11746E',900:'#0D5E5A' },
+              gray: { 50:'#F9FAFB',100:'#F4F6F8',200:'#E5E7EB',300:'#D1D5DB',400:'#9CA3AF',500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2933',900:'#111827' }
             }
           }
         }
@@ -36,302 +47,759 @@
   </script>
 
   <style>
-    @keyframes pulse-ripple {
-      0%   { transform: scale(1); opacity: 1; }
-      100% { transform: scale(2.5); opacity: 0; }
+    :root {
+      --ink: #1B1A18;
+      --paper: #F4F1EA;
+      --accent: #1F8D87;
     }
-    .pulse-dot-container { position:relative; display:inline-block; width:8px; height:8px; }
-    .pulse-dot { position:absolute; top:0; left:0; width:8px; height:8px; border-radius:50%; background:#1FB6AA; animation:pulse-ripple 2s ease-out infinite; }
-    .pulse-dot:nth-child(1){animation-delay:0s}
-    .pulse-dot:nth-child(2){animation-delay:.4s}
-    .pulse-dot:nth-child(3){animation-delay:.8s}
-    .pulse-dot:nth-child(4){animation-delay:1.2s}
-    .pulse-dot-core { position:absolute; top:0; left:0; width:8px; height:8px; border-radius:50%; background:#1FB6AA; z-index:1; }
 
-    /* Chronicle-inspired CTA animation */
-    .cta-animated {
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      color: var(--ink);
+      background: var(--paper);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    ::selection { background: #1B1A18; color: #F4F1EA; }
+
+    /* Subtle paper grain — break digital flatness */
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      mix-blend-mode: multiply; opacity: 0.06;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    /* Fine top hairline */
+    .hairline { height: 1px; background: rgba(27,26,24,0.10); }
+
+    /* Display headline — heavy presence, tight tracking */
+    .display {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: clamp(48px, 9vw, 132px);
+      line-height: 0.92;
+      letter-spacing: -0.045em;
+      text-wrap: balance;
+    }
+    .display em {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+    }
+    .eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #6f6c64;
+    }
+    .lead {
+      font-size: clamp(17px, 1.4vw, 20px);
+      line-height: 1.55;
+      color: #3C3A35;
+      max-width: 36ch;
+    }
+    .section-h {
+      font-weight: 600;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: -0.025em;
+      line-height: 1.05;
+      text-wrap: balance;
+    }
+    .section-h em {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    /* Number markers for steps / sections */
+    .num {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      color: #86837C;
+    }
+
+    /* Status pulse */
+    @keyframes pulse-ripple { 0% { transform: scale(1); opacity: .85; } 100% { transform: scale(3); opacity: 0; } }
+    .pulse-dot-container { position: relative; display: inline-block; width: 8px; height: 8px; }
+    .pulse-dot { position: absolute; inset: 0; border-radius: 9999px; background: var(--accent); animation: pulse-ripple 2.4s ease-out infinite; }
+    .pulse-dot:nth-child(2) { animation-delay: .8s; }
+    .pulse-dot:nth-child(3) { animation-delay: 1.6s; }
+    .pulse-core { position: absolute; inset: 0; border-radius: 9999px; background: var(--accent); }
+
+    /* Primary CTA — ink filled, micro spring */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: .55rem;
+      padding: 14px 22px;
+      background: #1B1A18; color: #F4F1EA;
+      border-radius: 999px;
+      font-weight: 500; font-size: 14px;
+      letter-spacing: -0.005em;
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), background .2s ease;
+      border: 1px solid #1B1A18;
+      will-change: transform;
+    }
+    .btn-primary:hover { transform: translateY(-1px) scale(1.012); background: #2a2925; }
+    .btn-primary:active { transform: translateY(0) scale(0.985); }
+    .btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .btn-primary svg { transition: transform .25s ease; }
+    .btn-primary:hover svg { transform: translateX(3px); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: .55rem;
+      padding: 14px 20px; border-radius: 999px;
+      font-weight: 500; font-size: 14px; color: #1B1A18;
+      transition: background .2s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+      border: 1px solid rgba(27,26,24,0.16);
+      background: transparent;
+    }
+    .btn-ghost:hover { background: rgba(27,26,24,0.05); transform: translateY(-1px); }
+    .btn-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    /* Inline link */
+    a.inline-link { color: var(--ink); position: relative; }
+    a.inline-link::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -2px;
+      height: 1px; background: rgba(27,26,24,0.30);
+      transform: scaleX(1); transform-origin: right;
+      transition: transform .35s cubic-bezier(.6,0,.2,1);
+    }
+    a.inline-link:hover::after { transform: scaleX(0); transform-origin: left; }
+
+    /* Nav link underline */
+    .nav-link { position: relative; color: #3C3A35; font-size: 14px; transition: color .2s; }
+    .nav-link:hover { color: #1B1A18; }
+    .nav-link::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -6px;
+      height: 1px; background: var(--ink);
+      transform: scaleX(0); transform-origin: left;
+      transition: transform .35s cubic-bezier(.6,0,.2,1);
+    }
+    .nav-link:hover::after { transform: scaleX(1); }
+
+    /* Hero visual frame — sharp top-left, soft bottom-right (broken radius) */
+    .visual-frame {
+      border-radius: 4px 28px 28px 28px;
+      background: #FBF9F4;
+      border: 1px solid rgba(27,26,24,0.10);
+      box-shadow:
+        0 1px 0 rgba(27,26,24,0.04),
+        0 30px 60px -30px rgba(31,141,135,0.18),
+        0 18px 36px -24px rgba(27,26,24,0.18);
+    }
+
+    /* Hero video — sits inside .visual-frame as a 16:9 surface so it blends
+       with the broken-radius frame without shifting layout when metadata
+       loads. Fades in on `is-ready` once the first frame is decoded so the
+       handover from poster → video isn't a hard pop. */
+    .hero-media {
       position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 14px;
       overflow: hidden;
-      isolation: isolate;
-      transform: translateZ(0);
-      transition: transform .24s ease, filter .24s ease;
-      box-shadow: none !important;
-      animation: cta-breathe 2.8s ease-in-out infinite;
+      background: #EDE8DD;
+      box-shadow:
+        inset 0 0 0 1px rgba(27,26,24,0.06),
+        inset 0 -40px 60px -30px rgba(27,26,24,0.16);
     }
-    .cta-animated:hover,
-    .cta-animated:focus-visible {
-      transform: translateY(-1px) scale(1.01);
-      box-shadow: none !important;
-      animation-play-state: paused;
+    .hero-media video,
+    .hero-media img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
     }
-    .cta-animated::before {
-      content: "";
-      position: absolute;
-      inset: -130% auto -130% -45%;
-      width: 34%;
-      transform: rotate(16deg) translateX(-220%);
-      background: linear-gradient(
-        90deg,
-        rgba(255,255,255,0) 0%,
-        rgba(255,255,255,0.34) 50%,
-        rgba(255,255,255,0) 100%
-      );
-      pointer-events: none;
+    .hero-media video {
+      opacity: 0;
+      transition: opacity .9s cubic-bezier(.2,.7,.2,1);
+      will-change: opacity;
     }
-    .cta-animated:hover::before,
-    .cta-animated:focus-visible::before {
-      animation: cta-shimmer .9s ease forwards;
+    .hero-media.is-ready video { opacity: 1; }
+    /* Soft top + bottom feathering so the video edges blend into the frame
+       interior rather than ending in a hard rectangle. */
+    .hero-media::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(251,249,244,0.18) 0%, rgba(251,249,244,0) 14%, rgba(251,249,244,0) 78%, rgba(251,249,244,0.20) 100%),
+        radial-gradient(120% 80% at 50% 100%, rgba(31,141,135,0.10) 0%, rgba(31,141,135,0) 60%);
+      mix-blend-mode: multiply;
     }
-    @keyframes cta-breathe {
-      0%, 100% { filter: brightness(1); }
-      50% { filter: brightness(1.03); }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-media video { opacity: 1; transition: none; }
     }
-    @keyframes cta-shimmer {
-      0% { transform: rotate(16deg) translateX(-220%); }
-      100% { transform: rotate(16deg) translateX(520%); }
+
+    /* Feature row — no boxes; rule-divided */
+    .rule { border-top: 1px solid rgba(27,26,24,0.12); }
+
+    /* Step card — uses background tint + heavy serial number */
+    .step .serial {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(64px, 8vw, 104px);
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: #1B1A18;
+    }
+
+    /* Use-case row — editorial list with hover slide */
+    .uc-row { transition: padding .35s cubic-bezier(.6,0,.2,1), color .2s; }
+    .uc-row:hover { padding-left: 14px; }
+    .uc-row .uc-arrow { opacity: 0; transform: translateX(-6px); transition: opacity .35s, transform .35s; }
+    .uc-row:hover .uc-arrow { opacity: 1; transform: translateX(0); }
+
+    /* Final CTA panel */
+    .cta-panel {
+      background:
+        radial-gradient(120% 140% at 0% 0%, rgba(31,141,135,0.18) 0%, rgba(31,141,135,0) 55%),
+        #1B1A18;
+      color: #F4F1EA;
+      border-radius: 28px;
+      box-shadow: 0 30px 80px -30px rgba(27,26,24,0.45);
+    }
+
+    /* Reveal-on-scroll: progressive enhancement (no-JS still readable) */
+    .reveal { opacity: 0; transform: translateY(14px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
+    .reveal.in { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .uc-row, .btn-primary, .btn-ghost, .nav-link::after { transition: none !important; }
+    }
+
+    /* Tabular numerals everywhere by default (data-friendly) */
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    /* Pipeline strip backdrop — subtle */
+    .strip-frame {
+      background: linear-gradient(180deg, rgba(27,26,24,0.02), rgba(27,26,24,0.04));
+      border-top: 1px solid rgba(27,26,24,0.08);
+      border-bottom: 1px solid rgba(27,26,24,0.08);
     }
   </style>
 </head>
 
-<body class="min-h-screen bg-zentrol-gray-100 text-zentrol-navy-500">
+<body class="min-h-screen">
 
-  <!-- Background accents -->
-  <div class="pointer-events-none fixed inset-0 -z-10">
-    <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-zentrol-teal-200/40 blur-3xl"></div>
-    <div class="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-zentrol-navy-200/40 blur-3xl"></div>
-  </div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-paper">Skip to content</a>
 
   <!-- NAV -->
-  <header class="sticky top-0 z-40 border-b border-zentrol-gray-200 bg-white/80 backdrop-blur">
-    <div class="mx-auto flex max-w-7xl items-center px-4 py-3 sm:px-6 lg:px-8">
-      <!-- Left: brand -->
-      <div class="flex min-w-0 flex-1 justify-start">
-        <a href="/" class="flex items-center gap-3">
-          <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-9 w-9">
-          <span class="text-lg font-semibold tracking-tight">Zentrol</span>
-        </a>
-      </div>
-      <!-- Center: section anchors (desktop) -->
-      <nav class="hidden flex-1 items-center justify-center gap-7 md:flex" aria-label="Page sections">
-        <a href="#features" class="text-sm text-zentrol-gray-600 hover:text-zentrol-navy-500">Features</a>
-        <a href="#how" class="text-sm text-zentrol-gray-600 hover:text-zentrol-navy-500">How it works</a>
-        <a href="#usecases" class="text-sm text-zentrol-gray-600 hover:text-zentrol-navy-500">Use cases</a>
+  <header class="sticky top-0 z-40" style="background: rgba(244,241,234,0.78); backdrop-filter: saturate(140%) blur(10px); -webkit-backdrop-filter: saturate(140%) blur(10px);">
+    <div class="hairline"></div>
+    <div class="mx-auto flex max-w-[1280px] items-center px-5 py-4 sm:px-8">
+      <a href="/" class="flex items-center gap-2.5">
+        <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-7 w-7" />
+        <span class="text-[15px] font-medium tracking-tight">Zentrol</span>
+        <span class="ml-1 hidden rounded-full bg-ink/[0.06] px-2 py-0.5 font-mono text-[10px] tracking-wider text-ink2 sm:inline">v1.0</span>
+      </a>
+
+      <nav class="ml-auto hidden items-center gap-8 md:flex" aria-label="Page sections">
+        <a href="#features"  class="nav-link">Features</a>
+        <a href="#how"       class="nav-link">How it works</a>
+        <a href="#usecases"  class="nav-link">Use cases</a>
       </nav>
-      <!-- Right: auth + CTA (desktop) / Demo (mobile) -->
-      <div class="flex min-w-0 flex-1 items-center justify-end gap-4 sm:gap-6">
+
+      <div class="ml-auto flex items-center gap-3 md:ml-8">
         <a href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}"
-           class="hidden text-sm font-medium text-zentrol-navy-500 hover:text-zentrol-teal-700 md:inline">Login</a>
-        <a href="{% url 'register' %}"
-           class="cta-animated hidden rounded-lg bg-zentrol-teal-500 px-4 py-2 text-sm font-semibold text-white
-                  hover:bg-zentrol-teal-600 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300 md:inline-flex">
-          Try for free
+           class="hidden text-sm text-ink2 transition hover:text-ink md:inline">
+          {% if request.user.is_authenticated %}Workspace{% else %}Sign in{% endif %}
         </a>
-        <a href="/presentation/"
-           class="md:hidden rounded-lg bg-zentrol-teal-500 px-3 py-2 text-sm font-semibold text-white hover:bg-zentrol-teal-600">
-          Demo
+        <a href="{% url 'register' %}" class="btn-primary !py-2.5 !px-4 text-[13px]">
+          Start free
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
       </div>
     </div>
   </header>
 
-  <!-- HERO -->
-  <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-    <div class="grid items-center gap-12 lg:grid-cols-2">
-      <div>
-        <div class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-zentrol-gray-700 shadow-sm">
-          <span class="pulse-dot-container">
-            <span class="pulse-dot"></span><span class="pulse-dot"></span>
-            <span class="pulse-dot"></span><span class="pulse-dot"></span>
-            <span class="pulse-dot-core"></span>
-          </span>
-          Web-based • Real-time AI • No hardware
-        </div>
-        <h1 class="mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">Control, naturally.</h1>
-        <p class="mt-4 max-w-xl text-lg leading-relaxed text-zentrol-gray-600">
-          Upload your PPTX, then control it with hand gestures and hear every slide read aloud automatically — no remote, no clicks.
-        </p>
-        <div class="mt-8 flex flex-wrap items-center gap-3">
-          <a href="{% url 'register' %}"
-             class="cta-animated rounded-lg bg-zentrol-teal-500 px-5 py-3 text-sm font-semibold text-white
-                    hover:bg-zentrol-teal-600 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-300">
-            Start for free
-          </a>
-          <a href="#how"
-             class="rounded-lg border border-zentrol-gray-200 bg-white px-5 py-3 text-sm font-semibold
-                    hover:bg-zentrol-gray-50 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-100">
-            How it works
-          </a>
-          <p class="w-full text-sm text-zentrol-gray-500">Your file never leaves your device.</p>
-        </div>
+  <main id="main" class="relative">
 
-        <div class="mt-10 grid max-w-xl grid-cols-3 gap-4">
-          <div class="rounded-xl border border-zentrol-gray-200 bg-white p-4">
-            <div class="mb-2 w-8 h-8 text-zentrol-teal-500" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <!-- HERO -->
+    <section class="relative">
+      <div class="mx-auto max-w-[1280px] px-5 pt-20 pb-14 sm:px-8 sm:pt-28 sm:pb-20 lg:pt-36 lg:pb-28">
+        <div class="grid grid-cols-12 gap-y-14 gap-x-8">
+
+          <div class="col-span-12 lg:col-span-7">
+            <div class="reveal flex items-center gap-3">
+              <span class="pulse-dot-container">
+                <span class="pulse-dot"></span>
+                <span class="pulse-dot"></span>
+                <span class="pulse-dot"></span>
+                <span class="pulse-core"></span>
+              </span>
+              <span class="eyebrow">Live in your browser · No install</span>
             </div>
-            <p class="text-sm font-semibold">Low latency</p>
-            <p class="mt-1 text-sm text-zentrol-gray-600">Smooth response</p>
-          </div>
-          <div class="rounded-xl border border-zentrol-gray-200 bg-white p-4">
-            <div class="mb-2 w-8 h-8 text-zentrol-teal-500" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+
+            <h1 class="reveal display mt-7">
+              Control,<br/>
+              <em>naturally.</em>
+            </h1>
+
+            <p class="reveal lead mt-7">
+              Upload a PPTX, then control it with hand gestures while every slide is read aloud. No remote. No clicker. No extra hardware.
+            </p>
+
+            <div class="reveal mt-9 flex flex-wrap items-center gap-3">
+              <a href="{% url 'register' %}" class="btn-primary">
+                Start free
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a href="#how" class="btn-ghost">See how it works</a>
+              <span class="ml-1 hidden text-[13px] text-mute md:inline">— processing happens on your device.</span>
             </div>
-            <p class="text-sm font-semibold">Reads slides</p>
-            <p class="mt-1 text-sm text-zentrol-gray-600">Real text, not scripts</p>
+
+            <!-- Spec line: monospace, comma-separated -->
+            <dl class="reveal mt-12 grid max-w-xl grid-cols-3 gap-x-8 gap-y-2 border-t border-line pt-6">
+              <div>
+                <dt class="num">Latency</dt>
+                <dd class="mt-1 text-[15px] font-medium tnum">~24 ms</dd>
+              </div>
+              <div>
+                <dt class="num">Setup</dt>
+                <dd class="mt-1 text-[15px] font-medium tnum">2 min</dd>
+              </div>
+              <div>
+                <dt class="num">Hardware</dt>
+                <dd class="mt-1 text-[15px] font-medium">Webcam only</dd>
+              </div>
+            </dl>
           </div>
-          <div class="rounded-xl border border-zentrol-gray-200 bg-white p-4">
-            <div class="mb-2 w-8 h-8 text-zentrol-teal-500" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="1.5"/></svg>
+
+          <!-- Hero visual — broken radius frame, asymmetric placement -->
+          <div class="col-span-12 lg:col-span-5">
+            <div class="reveal lg:translate-y-6">
+              <figure class="visual-frame relative overflow-hidden p-6 sm:p-7">
+                <figcaption class="flex items-center justify-between">
+                  <span class="num">Frame · gesture/next</span>
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-accentSoft/80 px-2.5 py-1 text-[11px] font-medium text-accent2">
+                    <span class="h-1.5 w-1.5 rounded-full" style="background: var(--accent);"></span>
+                    detecting
+                  </span>
+                </figcaption>
+                <div id="hero-media" class="hero-media mt-5">
+                  <!-- Poster under video; video autoplays muted; pause off-screen in JS -->
+                  <img src="{% static 'media/images/hero-gesture.svg' %}" alt="" aria-hidden="true" />
+                  <video
+                    id="hero-video"
+                    class="hero-video"
+                    src="{% static 'media/video/intro.mp4' %}"
+                    poster="{% static 'media/images/hero-gesture.svg' %}"
+                    autoplay muted loop playsinline preload="metadata"
+                    disablepictureinpicture disableremoteplayback
+                    aria-label="Zentrol product demo — a hand gesture advances a slide while narration speaks"
+                  >
+                    <p class="absolute inset-0 grid place-items-center px-4 text-center text-[13px] text-ink2">
+                      Your browser doesn't support inline video.
+                    </p>
+                  </video>
+                </div>
+                <div class="mt-5 grid grid-cols-3 gap-3 border-t border-line pt-5 text-[12px] text-ink2">
+                  <div>
+                    <div class="num">camera</div>
+                    <div class="mt-1 font-medium">on-device</div>
+                  </div>
+                  <div>
+                    <div class="num">model</div>
+                    <div class="mt-1 font-medium">MediaPipe</div>
+                  </div>
+                  <div>
+                    <div class="num">stream</div>
+                    <div class="mt-1 font-medium">no upload</div>
+                  </div>
+                </div>
+              </figure>
+
             </div>
-            <p class="text-sm font-semibold">Plugin-ready</p>
-            <p class="mt-1 text-sm text-zentrol-gray-600">Works on Moodle</p>
           </div>
         </div>
       </div>
 
-      <!-- Hero visual -->
-      <div class="relative">
-        <div class="absolute -top-10 -right-10 h-56 w-56 rounded-full bg-zentrol-teal-200/40 blur-3xl"></div>
-        <div class="absolute -bottom-10 -left-10 h-56 w-56 rounded-full bg-zentrol-navy-200/40 blur-3xl"></div>
-        <div class="relative overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm">
-          <p class="text-xs font-semibold text-zentrol-gray-500">Gesture control in action</p>
-          <img src="{% static 'media/images/hero-gesture.svg' %}" alt="Gesture controlling a presentation" class="mt-4 w-full">
-          <div class="mt-5 flex flex-wrap items-center gap-2">
-            <span class="rounded-full bg-zentrol-teal-50 px-3 py-1 text-xs font-semibold text-zentrol-teal-700">Live</span>
-            <span class="rounded-full bg-zentrol-gray-100 px-3 py-1 text-xs font-semibold text-zentrol-gray-700">On-device only</span>
-            <span class="rounded-full bg-zentrol-gray-100 px-3 py-1 text-xs font-semibold text-zentrol-gray-700">No hardware</span>
+      <!-- Pipeline strip — flex + equal side widths keeps SVG centered; img always w-full inside flex-1 -->
+      <div class="strip-frame">
+        <div class="mx-auto flex max-w-[1280px] items-center justify-center gap-4 px-5 py-6 sm:gap-6 sm:px-8">
+          <span class="num hidden w-[5.5rem] shrink-0 sm:inline">PIPELINE</span>
+          <div class="flex min-w-0 flex-1 justify-center">
+            <img src="{% static 'media/images/pipeline-strip.svg' %}" alt="Camera frame to gesture classification to slide action" class="h-auto w-full max-w-3xl" />
           </div>
+          <span class="hidden w-[5.5rem] shrink-0 sm:block" aria-hidden="true"></span>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="mt-10">
-      <img src="{% static 'media/images/pipeline-strip.svg' %}" alt="Camera to gesture to action" class="w-full">
-    </div>
-  </section>
 
-  <!-- FEATURES -->
-  <section id="features" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-    <h2 class="text-2xl font-semibold tracking-tight">Features</h2>
-    <p class="mt-2 max-w-2xl text-zentrol-gray-600">Simple on the surface, powerful underneath.</p>
-    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-realtime.svg' %}" alt="Real-time recognition" class="h-24 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">Real-time recognition</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Fast detection that keeps up with natural movement.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-presentation.svg' %}" alt="Presentation control" class="h-24 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">PPTX narration</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Reads real slide text aloud — not hardcoded scripts.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-webapp.svg' %}" alt="Web app actions" class="h-24 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">Moodle plugin</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Embed Zentrol directly in your LMS via iframe or LTI.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition text-center">
-        <img src="{% static 'media/images/feature-nohardware.svg' %}" alt="No hardware" class="h-24 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">No hardware</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Runs in the browser with your existing camera.</p>
-      </div>
-    </div>
-  </section>
+    <!-- FEATURES — asymmetric, rule-divided, no card boxes -->
+    <section id="features" class="relative">
+      <div class="mx-auto max-w-[1280px] px-5 py-24 sm:px-8 sm:py-32">
+        <header class="grid grid-cols-12 gap-8">
+          <div class="col-span-12 lg:col-span-5">
+            <span class="num">— 01 / Capabilities</span>
+            <h2 class="section-h reveal mt-4">
+              Quietly capable.<br/>
+              <em>Loudly useful.</em>
+            </h2>
+          </div>
+          <div class="col-span-12 lg:col-span-6 lg:col-start-7">
+            <p class="reveal mt-4 text-[16px] leading-relaxed text-ink2 lg:mt-12" style="max-width: 50ch;">
+              Each capability is on by default — nothing to configure, no settings sprawl. The full feature set is shipped with the launch tier.
+            </p>
+          </div>
+        </header>
 
-  <!-- HOW IT WORKS -->
-  <section id="how" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-    <h2 class="text-2xl font-semibold tracking-tight">How it works</h2>
-    <p class="mt-2 max-w-2xl text-zentrol-gray-600">Three steps. No complicated setup.</p>
-    <div class="mt-10 grid gap-6 lg:grid-cols-3">
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-7 shadow-sm text-center">
-        <div class="h-28 w-auto mx-auto flex items-center justify-center text-6xl">📁</div>
-        <p class="mt-4 text-sm font-semibold text-zentrol-teal-700">Step 1</p>
-        <h3 class="mt-2 font-semibold">Upload your PPTX</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Drop your file — it's parsed in your browser, never sent anywhere.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-7 shadow-sm text-center">
-        <div class="h-28 w-auto mx-auto flex items-center justify-center text-6xl">🤚</div>
-        <p class="mt-4 text-sm font-semibold text-zentrol-teal-700">Step 2</p>
-        <h3 class="mt-2 font-semibold">Enable your camera</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Allow camera access so Zentrol can detect your hand gestures live.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-7 shadow-sm text-center">
-        <div class="h-28 w-auto mx-auto flex items-center justify-center text-6xl">🎙️</div>
-        <p class="mt-4 text-sm font-semibold text-zentrol-teal-700">Step 3</p>
-        <h3 class="mt-2 font-semibold">Present hands-free</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Navigate with gestures. Each slide's real text is read aloud automatically.</p>
-      </div>
-    </div>
-  </section>
+        <div class="rule mt-16"></div>
 
-  <!-- USE CASES -->
-  <section id="usecases" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-    <h2 class="text-2xl font-semibold tracking-tight">Use cases</h2>
-    <p class="mt-2 max-w-2xl text-zentrol-gray-600">Built for real situations, not just demos.</p>
-    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-presenter.svg' %}" alt="Presenters" class="h-20 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">Presenters</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Stay engaged while Zentrol handles navigation.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-educator.svg' %}" alt="Educators" class="h-20 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">Educators</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Keep a natural flow in class or online teaching.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-accessibility.svg' %}" alt="Accessibility" class="h-20 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">Accessibility</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Hands-free control for users with limited mobility.</p>
-      </div>
-      <div class="rounded-2xl border border-zentrol-gray-200 bg-white p-6 shadow-sm text-center">
-        <img src="{% static 'media/images/usecase-demo.svg' %}" alt="LMS / Moodle" class="h-20 w-auto mx-auto">
-        <h3 class="mt-4 font-semibold">LMS / Moodle</h3>
-        <p class="mt-2 text-sm text-zentrol-gray-600">Embed as a plugin — students upload and present directly in Moodle.</p>
-      </div>
-    </div>
-  </section>
+        <!-- Item 01 -->
+        <article class="reveal grid grid-cols-12 gap-8 py-12">
+          <div class="col-span-12 md:col-span-2">
+            <div class="num">01</div>
+          </div>
+          <div class="col-span-12 md:col-span-6">
+            <h3 class="text-[26px] font-medium leading-snug tracking-tight">Real-time hand tracking that keeps up with the room.</h3>
+            <p class="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-ink2">
+              MediaPipe runs in-browser at roughly twenty-four milliseconds per frame, so a flick of the wrist is read instantly — not after a beat.
+            </p>
+          </div>
+          <div class="col-span-12 md:col-span-4">
+            <img src="{% static 'media/images/feature-realtime.svg' %}" alt="" class="ml-auto h-28 w-auto opacity-90" />
+          </div>
+        </article>
 
-  <!-- CTA -->
-  <section class="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-    <div class="rounded-2xl bg-zentrol-navy-500 px-8 py-12 text-white shadow-sm">
-      <div class="grid gap-8 lg:grid-cols-2 lg:items-center">
-        <div>
-          <h2 class="text-2xl font-semibold tracking-tight">Ready to try it?</h2>
-          <p class="mt-3 max-w-2xl text-white/80">Upload your PPTX and start presenting with gestures — right now.</p>
-          <div class="mt-8 flex flex-wrap gap-3">
-            <a href="{% url 'register' %}" class="cta-animated rounded-lg bg-white px-5 py-3 text-sm font-semibold text-zentrol-navy-500 hover:bg-zentrol-gray-50">
-              Start for free
+        <div class="rule"></div>
+
+        <!-- Item 02 — flipped for asymmetry -->
+        <article class="reveal grid grid-cols-12 gap-8 py-12">
+          <div class="col-span-12 md:col-span-4 md:order-1">
+            <img src="{% static 'media/images/feature-presentation.svg' %}" alt="" class="h-28 w-auto opacity-90" />
+          </div>
+          <div class="col-span-12 md:col-span-2 md:order-2">
+            <div class="num">02</div>
+          </div>
+          <div class="col-span-12 md:col-span-6 md:order-3">
+            <h3 class="text-[26px] font-medium leading-snug tracking-tight">Reads the actual text on every slide — not a script.</h3>
+            <p class="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-ink2">
+              Narration is generated from the contents of your deck, slide by slide. Edit a bullet at 2 a.m., and the next dry-run reads what you wrote.
+            </p>
+          </div>
+        </article>
+
+        <div class="rule"></div>
+
+        <!-- Item 03 -->
+        <article class="reveal grid grid-cols-12 gap-8 py-12">
+          <div class="col-span-12 md:col-span-2">
+            <div class="num">03</div>
+          </div>
+          <div class="col-span-12 md:col-span-6">
+            <h3 class="text-[26px] font-medium leading-snug tracking-tight">Drops into Moodle as an LTI 1.3 activity.</h3>
+            <p class="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-ink2">
+              Add Zentrol once at the site level; instructors embed it as an external tool. Single sign-on, gradebook passback, and per-course launch — out of the box.
+            </p>
+          </div>
+          <div class="col-span-12 md:col-span-4">
+            <img src="{% static 'media/images/feature-webapp.svg' %}" alt="" class="ml-auto h-28 w-auto opacity-90" />
+          </div>
+        </article>
+
+        <div class="rule"></div>
+
+        <!-- Item 04 -->
+        <article class="reveal grid grid-cols-12 gap-8 py-12">
+          <div class="col-span-12 md:col-span-4 md:order-1">
+            <img src="{% static 'media/images/feature-nohardware.svg' %}" alt="" class="h-28 w-auto opacity-90" />
+          </div>
+          <div class="col-span-12 md:col-span-2 md:order-2">
+            <div class="num">04</div>
+          </div>
+          <div class="col-span-12 md:col-span-6 md:order-3">
+            <h3 class="text-[26px] font-medium leading-snug tracking-tight">No clickers, no dongles, no installs.</h3>
+            <p class="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-ink2">
+              Anything with a webcam and a modern browser will do. Camera frames are processed locally — they never touch a server.
+            </p>
+          </div>
+        </article>
+
+        <div class="rule"></div>
+      </div>
+    </section>
+
+
+    <!-- HOW IT WORKS — vertical timeline with serial numbers -->
+    <section id="how" class="relative" style="background: #EDE8DD;">
+      <div class="mx-auto max-w-[1280px] px-5 py-24 sm:px-8 sm:py-32">
+        <header class="grid grid-cols-12 gap-8">
+          <div class="col-span-12 lg:col-span-7">
+            <span class="num">— 02 / Setup</span>
+            <h2 class="section-h reveal mt-4">From a fresh tab to <em>hands-free</em> in three steps.</h2>
+          </div>
+          <div class="col-span-12 lg:col-span-4 lg:col-start-9">
+            <p class="reveal mt-4 text-[16px] leading-relaxed text-ink2 lg:mt-12">
+              Setup happens once. After that, every deck you upload picks up the same camera and narration profile.
+            </p>
+          </div>
+        </header>
+
+        <ol class="mt-16 grid grid-cols-12 gap-8">
+          <li class="step reveal col-span-12 md:col-span-4">
+            <div class="serial">01</div>
+            <p class="num mt-6">Upload</p>
+            <h3 class="mt-2 text-[20px] font-medium tracking-tight">Drop your .pptx in.</h3>
+            <p class="mt-2 max-w-[36ch] text-[14.5px] leading-relaxed text-ink2">
+              Parsed locally — your deck never leaves the browser tab.
+            </p>
+          </li>
+          <li class="step reveal col-span-12 md:col-span-4">
+            <div class="serial">02</div>
+            <p class="num mt-6">Allow camera</p>
+            <h3 class="mt-2 text-[20px] font-medium tracking-tight">Wave once to calibrate.</h3>
+            <p class="mt-2 max-w-[36ch] text-[14.5px] leading-relaxed text-ink2">
+              A four-second handshake teaches the model the lighting in your room.
+            </p>
+          </li>
+          <li class="step reveal col-span-12 md:col-span-4">
+            <div class="serial">03</div>
+            <p class="num mt-6">Present</p>
+            <h3 class="mt-2 text-[20px] font-medium tracking-tight">Step away from the keyboard.</h3>
+            <p class="mt-2 max-w-[36ch] text-[14.5px] leading-relaxed text-ink2">
+              Swipe to advance, palm to pause narration, fist to blank the screen.
+            </p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+
+    <!-- USE CASES — editorial list -->
+    <section id="usecases" class="relative">
+      <div class="mx-auto max-w-[1280px] px-5 py-24 sm:px-8 sm:py-32">
+        <header class="grid grid-cols-12 gap-8">
+          <div class="col-span-12 lg:col-span-7">
+            <span class="num">— 03 / Where it lands</span>
+            <h2 class="section-h reveal mt-4">Made for the room, <em>not the demo reel.</em></h2>
+          </div>
+        </header>
+
+        <ul class="mt-14 divide-y divide-line border-y border-line">
+          <li>
+            <a href="{% url 'register' %}" class="uc-row group flex items-center gap-6 py-7">
+              <span class="num w-12 shrink-0">01</span>
+              <div class="min-w-0 flex-1">
+                <h3 class="text-[22px] font-medium tracking-tight">Speakers and presenters</h3>
+                <p class="mt-1 max-w-[58ch] text-[14.5px] text-ink2">Walk the stage. Stop tethering yourself to a laptop just to advance a slide.</p>
+              </div>
+              <svg class="uc-arrow h-5 w-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
-          </div>
-          <p class="mt-3 text-xs text-white/70">No downloads required. Works in your browser.</p>
-        </div>
-        <img src="{% static 'media/images/feature-presentation.svg' %}" alt="" class="hidden lg:block h-56 w-auto ml-auto opacity-90">
+          </li>
+          <li>
+            <a href="{% url 'register' %}" class="uc-row group flex items-center gap-6 py-7">
+              <span class="num w-12 shrink-0">02</span>
+              <div class="min-w-0 flex-1">
+                <h3 class="text-[22px] font-medium tracking-tight">Lecturers and instructors</h3>
+                <p class="mt-1 max-w-[58ch] text-[14.5px] text-ink2">Keep eye contact with the room. Narration covers the read-aloud in case students missed a slide.</p>
+              </div>
+              <svg class="uc-arrow h-5 w-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'register' %}" class="uc-row group flex items-center gap-6 py-7">
+              <span class="num w-12 shrink-0">03</span>
+              <div class="min-w-0 flex-1">
+                <h3 class="text-[22px] font-medium tracking-tight">Accessibility and limited mobility</h3>
+                <p class="mt-1 max-w-[58ch] text-[14.5px] text-ink2">A full presentation flow that doesn't depend on holding or pressing anything.</p>
+              </div>
+              <svg class="uc-arrow h-5 w-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'register' %}" class="uc-row group flex items-center gap-6 py-7">
+              <span class="num w-12 shrink-0">04</span>
+              <div class="min-w-0 flex-1">
+                <h3 class="text-[22px] font-medium tracking-tight">Moodle &amp; LMS deployments</h3>
+                <p class="mt-1 max-w-[58ch] text-[14.5px] text-ink2">Embed Zentrol once via LTI 1.3; students upload, present, and submit without leaving the course.</p>
+              </div>
+              <svg class="uc-arrow h-5 w-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </li>
+        </ul>
       </div>
-    </div>
-  </section>
+    </section>
+
+
+    <!-- FINAL CTA -->
+    <section class="relative">
+      <div class="mx-auto max-w-[1280px] px-5 pb-24 sm:px-8 sm:pb-32">
+        <div class="cta-panel reveal grid grid-cols-12 gap-8 px-7 py-14 sm:px-12 sm:py-20">
+          <div class="col-span-12 lg:col-span-8">
+            <span class="num" style="color:#A9A59A">— ready when you are</span>
+            <h2 class="display mt-5" style="font-size: clamp(40px, 6.5vw, 80px); color:#F4F1EA;">
+              Open a tab.<br/>
+              <em style="color:#F4F1EA;">Present.</em>
+            </h2>
+            <p class="mt-7 max-w-[44ch] text-[16px] leading-relaxed" style="color:#C9C5B8;">
+              No checkout. No card. Upload a deck and you're in the workspace before the kettle boils.
+            </p>
+            <div class="mt-10 flex flex-wrap items-center gap-3">
+              <a href="{% url 'register' %}"
+                 class="btn-primary"
+                 style="background:#F4F1EA;color:#1B1A18;border-color:#F4F1EA;">
+                Start free
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a href="/presentation/" class="btn-ghost" style="color:#F4F1EA;border-color:rgba(244,241,234,0.25);">
+                Try the live demo
+              </a>
+            </div>
+          </div>
+          <div class="col-span-12 lg:col-span-4">
+            <ul class="mt-2 grid gap-5 lg:mt-12">
+              <li>
+                <p class="num" style="color:#A9A59A">camera</p>
+                <p class="mt-1 text-[15px]">Frames stay on your device.</p>
+              </li>
+              <li>
+                <p class="num" style="color:#A9A59A">deck</p>
+                <p class="mt-1 text-[15px]">Parsed in the browser, never uploaded.</p>
+              </li>
+              <li>
+                <p class="num" style="color:#A9A59A">support</p>
+                <p class="mt-1 text-[15px]">Chrome, Edge, Safari 17+, Firefox 121+.</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
 
   <!-- FOOTER -->
-  <footer class="border-t border-zentrol-gray-200 bg-white">
-    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-center gap-3">
-          <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-9 w-9">
-          <div>
-            <p class="font-semibold">Zentrol</p>
-            <p class="text-sm text-zentrol-gray-600">Control, naturally.</p>
-          </div>
+  <footer>
+    <div class="hairline"></div>
+    <div class="mx-auto max-w-[1280px] px-5 py-12 sm:px-8">
+      <div class="grid grid-cols-12 gap-8">
+        <div class="col-span-12 md:col-span-5">
+          <a href="/" class="flex items-center gap-2.5">
+            <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="" class="h-7 w-7" />
+            <span class="text-[15px] font-medium tracking-tight">Zentrol</span>
+          </a>
+          <p class="mt-4 max-w-sm text-[14px] text-ink2">
+            A small piece of software that lets you stop fiddling with a clicker and just present.
+          </p>
         </div>
-        <div class="flex flex-wrap gap-x-8 gap-y-2 text-sm text-zentrol-gray-600">
-          <a href="#features"  class="hover:text-zentrol-navy-500">Features</a>
-          <a href="#how"       class="hover:text-zentrol-navy-500">How it works</a>
-          <a href="#usecases"  class="hover:text-zentrol-navy-500">Use cases</a>
-          <a href="/presentation/" class="hover:text-zentrol-navy-500">Demo</a>
-        </div>
+
+        <nav class="col-span-6 md:col-span-3" aria-label="Sections">
+          <p class="num">Sections</p>
+          <ul class="mt-4 space-y-2 text-[14px] text-ink2">
+            <li><a href="#features"  class="hover:text-ink">Features</a></li>
+            <li><a href="#how"       class="hover:text-ink">How it works</a></li>
+            <li><a href="#usecases"  class="hover:text-ink">Use cases</a></li>
+          </ul>
+        </nav>
+
+        <nav class="col-span-6 md:col-span-2" aria-label="App">
+          <p class="num">App</p>
+          <ul class="mt-4 space-y-2 text-[14px] text-ink2">
+            <li><a href="/presentation/" class="hover:text-ink">Live demo</a></li>
+            <li><a href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}" class="hover:text-ink">{% if request.user.is_authenticated %}Workspace{% else %}Sign in{% endif %}</a></li>
+            <li><a href="{% url 'register' %}" class="hover:text-ink">Create account</a></li>
+          </ul>
+        </nav>
+
+        <nav class="col-span-12 md:col-span-2" aria-label="Status">
+          <p class="num">Status</p>
+          <ul class="mt-4 space-y-2 text-[14px] text-ink2">
+            <li class="inline-flex items-center gap-2">
+              <span class="h-1.5 w-1.5 rounded-full" style="background: var(--accent);"></span>
+              All systems normal
+            </li>
+            <li class="tnum">Build · 1.0.0</li>
+          </ul>
+        </nav>
       </div>
-      <p class="mt-8 text-xs text-zentrol-gray-500">© 2026 Zentrol. Camera access is used only for gesture detection.</p>
+
+      <div class="mt-12 flex flex-col items-start justify-between gap-3 border-t border-line pt-6 text-[12.5px] text-mute sm:flex-row sm:items-center">
+        <p>© 2026 Zentrol. Camera access is used only for gesture detection.</p>
+        <p class="font-mono tracking-wider">made for the room, not the demo reel.</p>
+      </div>
     </div>
   </footer>
+
+  <script>
+    // Staggered scroll-in reveal — small, dependency-free
+    (function () {
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        els.forEach(function (el) { el.classList.add('in'); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry, i) {
+          if (entry.isIntersecting) {
+            var el = entry.target;
+            // Stagger siblings inside the same parent
+            var siblings = Array.prototype.filter.call(
+              el.parentElement ? el.parentElement.querySelectorAll('.reveal') : [],
+              function (n) { return n === el || (entry.target.parentElement && entry.target.parentElement.contains(n)); }
+            );
+            var idx = Array.prototype.indexOf.call(siblings, el);
+            el.style.transitionDelay = Math.min(idx, 4) * 80 + 'ms';
+            el.classList.add('in');
+            io.unobserve(el);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      els.forEach(function (el) { io.observe(el); });
+    })();
+
+    // Hero video — smooth handover from poster + pause when off-screen.
+    // Goals:
+    //   1. No layout pop when the first frame decodes (.is-ready cross-fades).
+    //   2. No CPU/battery spent decoding while the user is scrolled past
+    //      the hero (IntersectionObserver pauses + resumes).
+    //   3. Honour prefers-reduced-motion (don't autoplay; show poster only).
+    //   4. Survive autoplay rejection on locked-down browsers (we don't show
+    //      controls, but the poster stays in place so the frame is never empty).
+    (function () {
+      var wrap = document.getElementById('hero-media');
+      var video = document.getElementById('hero-video');
+      if (!wrap || !video) return;
+
+      var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reducedMotion) {
+        try { video.removeAttribute('autoplay'); video.pause(); } catch (_) {}
+        wrap.classList.add('is-ready');
+        return;
+      }
+
+      function reveal() { wrap.classList.add('is-ready'); }
+      if (video.readyState >= 2) reveal();
+      else video.addEventListener('loadeddata', reveal, { once: true });
+
+      // Some browsers (Safari low-power, Brave shields, etc.) silently reject
+      // muted autoplay. Try one explicit play() — if it still rejects we just
+      // leave the poster in place rather than throwing in the console.
+      var tryPlay = video.play();
+      if (tryPlay && typeof tryPlay.catch === 'function') tryPlay.catch(function () {});
+
+      if ('IntersectionObserver' in window) {
+        var pauseObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              var p = video.play();
+              if (p && typeof p.catch === 'function') p.catch(function () {});
+            } else {
+              try { video.pause(); } catch (_) {}
+            }
+          });
+        }, { threshold: 0.15 });
+        pauseObserver.observe(wrap);
+      }
+    })();
+  </script>
 
 </body>
 </html>

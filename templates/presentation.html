@@ -3,77 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Gesture-controlled presentation system using MediaPipe and Reveal.js">
-    <title>Zentrol | Gesture Controlled Presentation</title>
+    <meta name="description" content="Present a deck hands-free with hand gestures and slide-by-slide narration — runs in your browser.">
+    <title>Workspace · Zentrol</title>
 
     {% load static %}
-    
-    <!-- Favicon -->
+
     <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
     <link rel="apple-touch-icon" href="{% static 'media/logo/zentrol-icon.svg' %}">
 
-    <!-- Tailwind CSS + daisyUI (CDN) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS + daisyUI (CDN, kept for .tooltip classes used in the markup) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" />
     <script>
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans:  ['"Inter Tight"', 'system-ui', 'sans-serif'],
+                        serif: ['"Instrument Serif"', 'serif'],
+                        mono:  ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+                    },
                     boxShadow: {
-                        soft: '0 10px 30px rgba(15, 23, 42, 0.14)',
-                        glow: '0 0 0 3px rgba(20, 184, 166, 0.22)'
+                        soft: '0 18px 40px -20px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.06) inset',
+                        glow: '0 0 0 3px rgba(31,141,135,0.22)'
                     },
                     colors: {
-                        /* Reference “Resizable Layout” teal/slate ramp (gradient + glass UI) */
+                        /* New editorial design tokens (used across the redesign) */
+                        paper:     '#F4F1EA',
+                        ink:       '#1B1A18',
+                        ink2:      '#3C3A35',
+                        mute:      '#86837C',
+                        accent:    '#1F8D87',
+                        accent2:   '#176A66',
+                        accentSoft:'#DCE9E7',
+
+                        /* Backwards-compat tokens (existing markup references some of these classes) */
                         ref: {
-                            50: '#f0fdfa',
-                            100: '#ccfbf1',
-                            200: '#99f6e4',
-                            300: '#5eead4',
-                            400: '#2dd4bf',
-                            500: '#14b8a6',
-                            600: '#0ea5a4',
-                            700: '#0f766e',
-                            800: '#115e59',
-                            900: '#0f172a'
+                            50: '#F2EFE8', 100: '#E6E1D5', 200: '#CFC9BB', 300: '#9D998F',
+                            400: '#56544E', 500: '#2A2A28', 600: '#1F1E1C', 700: '#181715',
+                            800: '#121110', 900: '#0E0D0B'
                         },
                         zentrol: {
-                            navy: {
-                                50:  '#E6EBF0',
-                                100: '#C0CAD8',
-                                200: '#99A9C0',
-                                300: '#7288A8',
-                                400: '#4B6790',
-                                500: '#0F1E2E',
-                                600: '#0D1A28',
-                                700: '#0B1622',
-                                800: '#09121C',
-                                900: '#070E16'
-                            },
-                            teal: {
-                                50:  '#E6FAF8',
-                                100: '#C1F0EB',
-                                200: '#9CE6DE',
-                                300: '#77DCD1',
-                                400: '#52D2C4',
-                                500: '#1FB6AA',
-                                600: '#1AA096',
-                                700: '#168A82',
-                                800: '#11746E',
-                                900: '#0D5E5A'
-                            },
-                            gray: {
-                                50:  '#F9FAFB',
-                                100: '#F4F6F8',
-                                200: '#E5E7EB',
-                                300: '#D1D5DB',
-                                400: '#9CA3AF',
-                                500: '#6B7280',
-                                600: '#4B5563',
-                                700: '#374151',
-                                800: '#1F2933',
-                                900: '#111827'
-                            }
+                            navy: { 50:'#E6EBF0',100:'#C0CAD8',200:'#99A9C0',300:'#7288A8',400:'#4B6790',500:'#0F1E2E',600:'#0D1A28',700:'#0B1622',800:'#09121C',900:'#070E16' },
+                            teal: { 50:'#E6FAF8',100:'#C1F0EB',200:'#9CE6DE',300:'#77DCD1',400:'#52D2C4',500:'#1FB6AA',600:'#1AA096',700:'#168A82',800:'#11746E',900:'#0D5E5A' },
+                            gray: { 50:'#F9FAFB',100:'#F4F6F8',200:'#E5E7EB',300:'#D1D5DB',400:'#9CA3AF',500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2933',900:'#111827' }
                         }
                     }
                 }
@@ -83,41 +60,84 @@
 
 
     <style>
-        .reveal img{
-            max-width: 100% !important;
+        :root { --ink:#1B1A18; --paper:#F4F1EA; --accent:#1F8D87; --line: rgba(244,241,234,0.10); }
+        html, body { font-family: 'Inter Tight', system-ui, sans-serif; }
+        body {
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
         }
-        /* Control Hub — narration “live” dot */
+        ::selection { background: var(--accent); color: #FFFFFF; }
+
+        /* Replace the loud teal-cyan gradient with a refined warm-dark editorial shell */
+        .zentrol-shell-bg {
+            background:
+                radial-gradient(70% 60% at 0% 0%,  rgba(31,141,135,0.18) 0%, rgba(31,141,135,0) 55%),
+                radial-gradient(70% 60% at 100% 100%, rgba(244,241,234,0.04) 0%, rgba(244,241,234,0) 55%),
+                #1B1A18;
+            color: #F4F1EA;
+        }
+        .zentrol-grain::before {
+            content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            opacity: 0.05; mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        }
+
+        /* Editorial tokens used in headings/labels */
+        .display {
+            font-weight: 600;
+            font-size: clamp(28px, 3.4vw, 42px);
+            line-height: 0.98;
+            letter-spacing: -0.03em;
+        }
+        .display em {
+            font-family: 'Instrument Serif', serif;
+            font-style: italic;
+            font-weight: 400;
+        }
+        .num, .eyebrow {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 10.5px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(244,241,234,0.55);
+        }
+
+        .reveal img { max-width: 100% !important; }
+
+        /* Narration "live" dot — refined accent + softer ring */
         #narration-speaking-dot {
             display: inline-block;
             width: 8px;
             height: 8px;
             border-radius: 9999px;
-            background: rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.18);
             vertical-align: middle;
             transition: background 0.2s ease, box-shadow 0.2s ease;
         }
         #narration-speaking-dot.active {
-            background: #26a69a;
-            box-shadow: 0 0 0 3px rgba(38, 166, 154, 0.35);
-            animation: zentrol-pulse 1.1s ease-in-out infinite;
+            background: var(--accent);
+            box-shadow: 0 0 0 3px rgba(31,141,135,0.35);
+            animation: zentrol-pulse 1.4s ease-in-out infinite;
         }
         @keyframes zentrol-pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.45; }
+            50% { opacity: 0.55; }
         }
-        input[type="range"].hub-range {
-            accent-color: #26a69a;
-        }
+
+        input[type="range"].hub-range { accent-color: var(--accent); }
+
         #narration-toggle-btn.narration-on {
-            background-color: #26a69a !important;
+            background-color: var(--accent) !important;
             color: #fff !important;
+            border-color: var(--accent) !important;
         }
         #narration-toggle-btn.narration-off {
-            background-color: #1e222d !important;
-            color: rgba(255,255,255,0.65) !important;
-            border: 1px solid rgba(255,255,255,0.12);
+            background-color: rgba(255,255,255,0.04) !important;
+            color: rgba(255,255,255,0.78) !important;
+            border: 1px solid rgba(255,255,255,0.10);
         }
-        /* Waveform: no strip background — bar heights are set by narration.js (RAF + speech boundaries) */
+
+        /* Narration waveform strip */
         #narration-wave-strip {
             display: flex;
             align-items: flex-end;
@@ -132,29 +152,22 @@
             width: 2px;
             min-height: 4px;
             border-radius: 9999px;
+            background: rgba(244,241,234,0.55);
             align-self: flex-end;
             flex-shrink: 0;
             transform-origin: bottom center;
             will-change: height;
         }
+
         /* Control Hub tab panel fade */
         .hub-tab-panel {
             transition: opacity 180ms ease, transform 180ms ease;
             will-change: opacity, transform;
         }
-        .hub-tab-panel.is-enter {
-            opacity: 0;
-            transform: translateY(4px);
-        }
-        .hub-tab-panel.is-active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        /* Shell gradient (matches ref layout if Tailwind classes are bypassed) */
+        .hub-tab-panel.is-enter { opacity: 0; transform: translateY(4px); }
+        .hub-tab-panel.is-active { opacity: 1; transform: translateY(0); }
 
-        /* ================================================================
-           AAC Speak — matches Control Hub glass aesthetic
-           ================================================================ */
+        /* AAC phrase chips */
         .aac-phrase-btn {
             display: inline-flex;
             align-items: center;
@@ -163,25 +176,27 @@
             font-size: 11px;
             font-weight: 500;
             cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.12);
-            color: rgba(255,255,255,0.85);
-            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.10);
+            color: rgba(244,241,234,0.85);
+            background: rgba(255,255,255,0.04);
             transition: background 0.15s, border-color 0.15s, transform 0.1s;
             white-space: nowrap;
             line-height: 1.4;
+            font-family: 'Inter Tight', system-ui, sans-serif;
         }
         .aac-phrase-btn:hover {
-            background: rgba(31,182,170,0.2);
-            border-color: rgba(31,182,170,0.5);
+            background: rgba(31,141,135,0.18);
+            border-color: rgba(31,141,135,0.45);
             color: #fff;
         }
-        .aac-phrase-btn:active { transform: scale(0.95); }
+        .aac-phrase-btn:active { transform: scale(0.96); }
         .aac-phrase-selected {
-            background: #1FB6AA !important;
-            border-color: #1FB6AA !important;
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
             color: #fff !important;
-            box-shadow: 0 0 0 3px rgba(31,182,170,0.25);
+            box-shadow: 0 0 0 3px rgba(31,141,135,0.28);
         }
+
         #aac-caption-bar {
             position: fixed;
             bottom: 24px;
@@ -189,13 +204,15 @@
             transform: translateX(-50%) translateY(8px);
             z-index: 5000;
             max-width: 80vw;
-            background: rgba(10,18,28,0.95);
-            border: 1px solid rgba(31,182,170,0.4);
+            background: rgba(27,26,24,0.92);
+            border: 1px solid rgba(31,141,135,0.45);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 999px;
-            padding: 10px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #fff;
+            padding: 10px 22px;
+            font-size: 14.5px;
+            font-weight: 500;
+            color: #F4F1EA;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.22s ease, transform 0.22s ease;
@@ -203,15 +220,36 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        #aac-caption-bar.visible {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-        #aac-mouth-ratio { font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.4); }
-        #aac-mouth-ratio.open { color: #2dd4bf; }
+        #aac-caption-bar.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-        .zentrol-shell-bg {
-            background: linear-gradient(to bottom right, #0f766e, #0ea5a4, #06b6d4);
+        #aac-mouth-ratio {
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            font-size: 10px;
+            color: rgba(244,241,234,0.40);
+        }
+        #aac-mouth-ratio.open { color: var(--accent); }
+
+        /* Loading overlay */
+        .zentrol-loader {
+            width: 36px; height: 36px;
+            border-radius: 999px;
+            border: 2px solid rgba(244,241,234,0.10);
+            border-top-color: var(--accent);
+            animation: zentrol-spin 0.95s linear infinite;
+        }
+        @keyframes zentrol-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .zentrol-loader { animation: none; border-top-color: transparent; border-color: var(--accent); }
+            #narration-speaking-dot.active { animation: none; }
+        }
+
+        /* Header logo */
+        .zentrol-presenter-header {
+            background: rgba(27,26,24,0.78);
+            backdrop-filter: saturate(140%) blur(10px);
+            -webkit-backdrop-filter: saturate(140%) blur(10px);
+            color: #F4F1EA;
+            border-bottom: 1px solid var(--line);
         }
     </style>
 
@@ -221,20 +259,31 @@
 
 </head>
 
-<body data-session-id="{{ session_id }}" class="m-0 flex min-h-screen flex-col overflow-hidden p-0 font-sans antialiased bg-gradient-to-br from-ref-700 via-ref-600 to-cyan-500 text-white zentrol-shell-bg">
+<body data-session-id="{{ session_id }}" class="zentrol-shell-bg zentrol-grain m-0 flex min-h-screen flex-col overflow-hidden p-0 antialiased">
     {% csrf_token %}
 
-    <a href="#presentation-container" class="sr-only">Skip to presentation</a>
+    <a href="#presentation-container" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[3000] focus:rounded-full focus:bg-paper focus:px-4 focus:py-2 focus:text-ink">Skip to presentation</a>
 
     <!-- Loading Overlay -->
-    <aside id="loading-overlay" role="alert" aria-live="polite" class="fixed inset-0 w-full h-full bg-gradient-to-br from-ref-700 via-ref-600 to-cyan-500 zentrol-shell-bg flex flex-col justify-center items-center z-[2000] text-white transition-opacity duration-500">
-        <div class="loader w-12 h-12 border-[5px] border-white/10 border-t-zentrol-teal-500 rounded-full animate-spin mb-5" aria-hidden="true"></div>
-        <h3 class="text-xl font-bold mb-2">Initializing Gesture Detection</h3>
-        <p class="mb-2">Please allow camera access when prompted</p>
+    <aside id="loading-overlay" role="alert" aria-live="polite" class="zentrol-shell-bg fixed inset-0 z-[2000] flex w-full flex-col items-start justify-center px-8 transition-opacity duration-500 sm:px-16">
+        <div class="max-w-[460px]">
+            <span class="eyebrow inline-flex items-center gap-2.5">
+                <span class="zentrol-loader" aria-hidden="true"></span>
+                Booting · MediaPipe + camera
+            </span>
+            <h3 class="display mt-7" style="color:#F4F1EA;">Warming up<br/><em>gesture detection.</em></h3>
+            <p class="mt-5 max-w-[36ch] text-[15px] leading-relaxed" style="color:rgba(244,241,234,0.72);">
+                Please allow camera access when prompted. Frames are processed locally — they never leave this tab.
+            </p>
+            <div class="mt-7 grid gap-2 border-t border-white/10 pt-4 text-[12px]" style="color:rgba(244,241,234,0.55);">
+                <p><span class="num inline-block w-24" style="color:rgba(244,241,234,0.40)">model</span><span style="color:rgba(244,241,234,0.85)">MediaPipe Hands</span></p>
+                <p><span class="num inline-block w-24" style="color:rgba(244,241,234,0.40)">privacy</span><span style="color:rgba(244,241,234,0.85)">on-device only</span></p>
+            </div>
+        </div>
     </aside>
 
     <!-- Main Presentation Container - full width, panels float over -->
-    <main id="presentation-container" class="relative flex h-screen min-h-0 w-screen flex-col bg-gradient-to-br from-ref-700 via-ref-600 to-cyan-500 zentrol-shell-bg pt-[50px] pb-0 pl-0 pr-0 overflow-hidden transition-all duration-300">
+    <main id="presentation-container" class="zentrol-shell-bg relative flex h-screen min-h-0 w-screen flex-col overflow-hidden pt-[50px] transition-all duration-300">
         
         <!-- ========== Slide Filmstrip (desktop toggleable overview) ========== -->
         <button
@@ -521,10 +570,6 @@
                         <h3 class="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">Actions</h3>
                         <span class="text-[10px] text-white/40">Primary flow</span>
                     </div>
-                    <a id="change-file-btn" href="{% url 'dashboard' %}" style="display:none"
-                       class="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3 py-2.5 text-xs font-semibold text-white hover:bg-white/10">
-                        <span>📁</span><span>Change file</span>
-                    </a>
                     <button type="button"
                         class="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-zentrol-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-zentrol-teal-400"
                         onclick="Reveal.next()" aria-label="Next slide">
@@ -680,11 +725,15 @@
             </div>
         </aside>
 
-        <!-- Header: logo only -->
-        <header class="gesture-guide fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md text-zentrol-navy-500 py-2 px-4 border-b border-white/30 z-[1000] shadow-soft flex items-center min-h-[50px] ring-1 ring-white/20" aria-label="Presentation header">
-            <a href="/" target="_self" rel="noopener noreferrer" class="flex items-center gap-2" title="Zentrol">
-                <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol Logo" class="h-7 md:h-8 w-auto">
-                <span class="font-semibold text-zentrol-navy-700 text-sm md:text-base">Zentrol</span>
+        <!-- Header: logo + workspace exit -->
+        <header class="zentrol-presenter-header gesture-guide fixed top-0 left-0 right-0 z-[1000] flex items-center justify-between min-h-[50px] px-4 py-2" aria-label="Presentation header">
+            <a href="/" target="_self" rel="noopener noreferrer" class="flex items-center gap-2.5" title="Zentrol home">
+                <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol Logo" class="h-7 md:h-7 w-auto">
+                <span class="text-[14px] font-medium tracking-tight">Zentrol</span>
+                <span class="num ml-2 hidden sm:inline" style="color:rgba(244,241,234,0.45);">presenter</span>
+            </a>
+            <a href="{% url 'dashboard' %}" class="num inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1 transition hover:bg-white/10" style="color:rgba(244,241,234,0.85);">
+                ↩ workspace
             </a>
         </header>
 
@@ -1105,13 +1154,6 @@
             console.log('✅ Narration scripts patched with real slide text');
         }
 
-        // Show/hide "change file" button based on whether slides are loaded
-        function updateChangeFileBtn(hasFile) {
-            const btn = document.getElementById('change-file-btn');
-            if (btn) btn.style.display = hasFile ? 'flex' : 'none';
-        }
-
-
         // ================================================================
         // AAC Speak
         // ================================================================
@@ -1333,7 +1375,6 @@
                 injectUploadedSlides(uploadedSlides);
                 renderDynamicFilmstrip(uploadedSlides);
                 patchNarrationScripts(uploadedSlides);
-                updateChangeFileBtn(true);
                 if (window.presentationController) {
                     window.presentationController.updateSlideCount();
                     window.presentationController.updateSlideInfo();
@@ -1341,7 +1382,7 @@
                 console.log('✅ Presentation running from uploaded PPTX');
             } else {
                 window.__zentrolExternalSlideDeck = false;
-                updateChangeFileBtn(false);            }
+            }
         });
 
         // ================================================================

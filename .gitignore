@@ -6,8 +6,10 @@ __pycache__/
 db.sqlite3
 media/
 
-# Environment
+# Environment — never commit real secrets
 .env
+.env.*
+!.env.example
 .venv
 venv/
 env/
@@ -37,8 +39,5 @@ htmlcov/
 # Static files (generated)
 staticfiles/
 
-README.md
-.vscode
-docs/
-static/media.md
+# Misc archives / large artifacts (keep tracked docs undamaged)
 static/media.zip

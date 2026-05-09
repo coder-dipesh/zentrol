@@ -4,75 +4,345 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zentrol Workspace</title>
+  <title>Workspace · Zentrol</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: {
+            sans:  ['"Inter Tight"', 'system-ui', 'sans-serif'],
+            serif: ['"Instrument Serif"', 'serif'],
+            mono:  ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
           colors: {
+            paper:     '#F4F1EA',
+            paperDeep: '#EDE8DD',
+            ink:       '#1B1A18',
+            ink2:      '#3C3A35',
+            mute:      '#86837C',
+            line:      '#D9D4C7',
+            sand:      '#FBF9F4',
+            accent:    '#1F8D87',
+            accent2:   '#176A66',
+            accentSoft:'#DCE9E7',
             zentrol: {
-              navy: {
-                50:'#E6EBF0',100:'#C0CAD8',200:'#99A9C0',300:'#7288A8',400:'#4B6790',
-                500:'#0F1E2E',600:'#0D1A28',700:'#0B1622',800:'#09121C',900:'#070E16'
-              },
-              teal: {
-                50:'#E6FAF8',100:'#C1F0EB',200:'#9CE6DE',300:'#77DCD1',400:'#52D2C4',
-                500:'#1FB6AA',600:'#1AA096',700:'#168A82',800:'#11746E',900:'#0D5E5A'
-              },
-              gray: {
-                50:'#F9FAFB',100:'#F4F6F8',200:'#E5E7EB',300:'#D1D5DB',400:'#9CA3AF',
-                500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2933',900:'#111827'
-              }
+              navy: { 50:'#E6EBF0',100:'#C0CAD8',200:'#99A9C0',300:'#7288A8',400:'#4B6790',500:'#0F1E2E',600:'#0D1A28',700:'#0B1622',800:'#09121C',900:'#070E16' },
+              teal: { 50:'#E6FAF8',100:'#C1F0EB',200:'#9CE6DE',300:'#77DCD1',400:'#52D2C4',500:'#1FB6AA',600:'#1AA096',700:'#168A82',800:'#11746E',900:'#0D5E5A' },
+              gray: { 50:'#F9FAFB',100:'#F4F6F8',200:'#E5E7EB',300:'#D1D5DB',400:'#9CA3AF',500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2933',900:'#111827' }
             }
           },
           boxShadow: {
-            card: '0 8px 26px rgba(15, 30, 46, 0.08)'
+            card: '0 1px 0 rgba(27,26,24,0.04), 0 24px 48px -28px rgba(27,26,24,0.18)'
           }
         }
       }
     };
   </script>
   <style>
-    #upload-progress-bar { transition: width 0.28s ease; }
-    .fav-on { color: #f59e0b; fill: rgba(245, 158, 11, 0.18); stroke: #d97706; }
+    :root { --ink:#1B1A18; --paper:#F4F1EA; --accent:#1F8D87; --line:#D9D4C7; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    ::selection { background: #1B1A18; color: #F4F1EA; }
+
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      mix-blend-mode: multiply; opacity: 0.05;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    .display {
+      font-weight: 600;
+      font-size: clamp(34px, 4.6vw, 54px);
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+    .display em {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-weight: 400;
+    }
+    .eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6f6c64;
+    }
+    .num {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11.5px; letter-spacing: 0.12em; color: #86837C;
+    }
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+      padding: 12px 18px; background: #1B1A18; color: #F4F1EA;
+      border-radius: 999px; font-weight: 500; font-size: 13.5px;
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), background .2s ease;
+      border: 1px solid #1B1A18;
+    }
+    .btn-primary:hover { transform: translateY(-1px) scale(1.012); background: #2a2925; }
+    .btn-primary:active { transform: translateY(0) scale(0.985); }
+    .btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .btn-primary svg { transition: transform .25s ease; }
+    .btn-primary:hover svg { transform: translateX(2px); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+      padding: 10px 16px; border-radius: 999px;
+      font-weight: 500; font-size: 13.5px; color: #1B1A18;
+      transition: background .2s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+      border: 1px solid rgba(27,26,24,0.16);
+      background: #FBF9F4;
+    }
+    .btn-ghost:hover { background: rgba(27,26,24,0.05); transform: translateY(-1px); }
+    .btn-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 36px; width: 36px; border-radius: 999px;
+      color: #3C3A35;
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+      border: 1px solid transparent;
+    }
+    .icon-btn:hover { background: rgba(27,26,24,0.06); color: var(--ink); }
+    .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* Sidebar — icon above label; active = filled rounded tile, inactive = outline-only grey */
+    aside.sidebar-rail {
+      background: #FBF9F4;
+      border-right: 1px solid var(--line);
+    }
+    .rail-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      width: 56px;
+      padding: 10px 8px;
+      border-radius: 14px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: #86837c;
+      text-decoration: none;
+      transition: background .2s ease, color .2s ease;
+    }
+    .rail-link svg {
+      flex-shrink: 0;
+    }
+    .rail-link svg path {
+      stroke-width: 1.5;
+    }
+    .rail-link span {
+      max-width: 100%;
+      text-align: center;
+      line-height: 1.15;
+      white-space: nowrap;
+    }
+    .rail-link:hover {
+      background: rgba(27, 26, 24, 0.06);
+      color: #4a4843;
+    }
+    .rail-link.is-active {
+      background: #1b1a18;
+      color: #f4f1ea;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    }
+    .rail-link.is-active:hover {
+      background: #2a2925;
+      color: #f4f1ea;
+    }
+    button.rail-link {
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    button.rail-link:focus-visible,
+    a.rail-link:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Filter pills (grouped, no busy bg) */
+    .filter-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 999px;
+      font-size: 13px; color: #3C3A35;
+      transition: background .2s, color .2s, border-color .2s;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .filter-pill:hover { background: rgba(27,26,24,0.05); color: var(--ink); }
+    .filter-pill.is-active {
+      background: #FBF9F4;
+      border-color: rgba(27,26,24,0.14);
+      color: var(--ink);
+      box-shadow: 0 1px 0 rgba(27,26,24,0.04);
+    }
+
+    /* Asset card — no border + shadow + bg-white. Use sand surface, broken radius, lift on hover. */
+    .asset-card {
+      background: #FBF9F4;
+      border-radius: 4px 18px 18px 18px;
+      border: 1px solid rgba(27,26,24,0.08);
+      transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s, border-color .25s;
+    }
+    .asset-card:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        0 1px 0 rgba(27,26,24,0.04),
+        0 24px 48px -28px rgba(31,141,135,0.20),
+        0 18px 36px -28px rgba(27,26,24,0.18);
+      border-color: rgba(27,26,24,0.14);
+    }
+    .asset-thumb {
+      border-radius: 4px 18px 0 0;
+    }
+    .asset-card .menu-host { position: relative; }
+
+    /* List row */
+    .list-row {
+      transition: background .2s, padding-left .35s cubic-bezier(.6,0,.2,1);
+      border-bottom: 1px solid var(--line);
+    }
+    .list-row:hover { background: rgba(27,26,24,0.03); padding-left: 22px; }
+
+    /* Favorite */
+    .fav-on { color: #E1A33B; fill: rgba(225,163,59,0.20); stroke: #C5871F; }
+
+    /* Empty state */
+    .empty-frame {
+      background: #FBF9F4;
+      border: 1px dashed rgba(27,26,24,0.20);
+      border-radius: 4px 24px 24px 24px;
+    }
+
+    /* Modal surfaces */
+    .surface {
+      background: #FBF9F4;
+      border-radius: 4px 24px 24px 24px;
+      border: 1px solid rgba(27,26,24,0.10);
+      box-shadow:
+        0 1px 0 rgba(27,26,24,0.04),
+        0 30px 60px -30px rgba(31,141,135,0.18),
+        0 18px 36px -24px rgba(27,26,24,0.18);
+    }
+    .ink-input {
+      width: 100%;
+      background: #FFFFFF;
+      border: 1px solid rgba(27,26,24,0.14);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--ink);
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .ink-input:focus {
+      outline: none;
+      border-color: rgba(31,141,135,0.55);
+      box-shadow: 0 0 0 3px rgba(31,141,135,0.18);
+    }
+    .ink-input:disabled { background: rgba(27,26,24,0.04); color: var(--mute); cursor: not-allowed; }
+
+    .tab-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 999px;
+      font-size: 13px; color: #3C3A35;
+      transition: background .2s, color .2s;
+    }
+    .tab-pill:hover { background: rgba(27,26,24,0.05); color: var(--ink); }
+    .tab-pill.is-active { background: var(--ink); color: var(--paper); }
+
+    #upload-progress-bar { transition: width 0.28s ease; background: var(--accent); }
+
+    #dash-toast-inner.is-error {
+      border-color: rgba(185, 28, 28, 0.22);
+      background: rgba(254, 242, 242, 0.96);
+      color: #991b1b;
+    }
+
+    /* Card menu */
+    .card-menu {
+      background: #FBF9F4;
+      border: 1px solid rgba(27,26,24,0.12);
+      box-shadow: 0 18px 36px -18px rgba(27,26,24,0.30);
+      border-radius: 14px;
+    }
+    .card-menu button, .card-menu a {
+      transition: background .15s, color .15s;
+    }
+    .card-menu button:hover, .card-menu a:hover { background: rgba(27,26,24,0.05); }
+    .card-menu .danger:hover { background: rgba(220,38,38,0.08); }
+
+    /* Hairlines */
+    .hairline { height: 1px; background: rgba(27,26,24,0.10); }
   </style>
 </head>
-<body class="min-h-screen bg-zentrol-gray-100 text-zentrol-navy-500">
-  <aside class="fixed inset-y-0 left-0 z-40 w-20 overflow-visible border-r border-zentrol-gray-200 bg-white">
-    <div class="flex h-full flex-col items-center py-4">
-      <a href="{% url 'dashboard' %}" class="mb-5 grid h-10 w-10 place-items-center rounded-xl bg-zentrol-teal-500/10" title="Zentrol">
-        <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-6 w-6" />
+<body class="min-h-screen">
+
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- ============== SIDEBAR RAIL ============== -->
+  <aside class="sidebar-rail fixed inset-y-0 left-0 z-40 w-20 overflow-visible">
+    <div class="flex h-full flex-col items-center py-5">
+      <a href="{% url 'dashboard' %}" class="mb-7 grid h-10 w-10 place-items-center rounded-xl" title="Zentrol">
+        <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-7 w-7" />
       </a>
-      <nav class="mt-2 flex flex-1 flex-col items-center gap-2 text-[11px] text-zentrol-gray-600">
-        <a href="{% url 'dashboard' %}" class="flex w-14 flex-col items-center gap-1 rounded-xl bg-zentrol-teal-50 py-2 font-medium text-zentrol-teal-700" aria-current="page">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6 shrink-0" aria-hidden="true">
+
+      <nav class="mt-2 flex flex-1 flex-col items-center gap-3">
+        <a href="{% url 'dashboard' %}" class="rail-link is-active" aria-current="page">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="h-[22px] w-[22px]" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
           </svg>
           <span>Home</span>
         </a>
-        <span class="flex w-14 flex-col items-center gap-1 rounded-xl py-2">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6 shrink-0" aria-hidden="true">
+        <button
+          type="button"
+          id="rail-account-settings"
+          class="rail-link"
+          aria-haspopup="dialog"
+          aria-controls="account-settings-modal"
+          title="Account settings"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="h-[22px] w-[22px]" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
           </svg>
           <span>Settings</span>
-        </span>
+        </button>
       </nav>
+
       <div class="relative mt-auto flex w-full justify-center">
         <button
           type="button"
           id="account-menu-trigger"
-          class="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-zentrol-navy-500 text-xs font-semibold text-white ring-zentrol-teal-400 transition hover:ring-2 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-400"
+          class="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-ink text-[12px] font-semibold text-paper ring-accent transition hover:ring-2 focus:outline-none focus:ring-2 focus:ring-accent"
           aria-expanded="false"
           aria-haspopup="true"
           aria-controls="account-dropdown"
           title="Account"
         >
           {% if user_profile.avatar %}
-            <img src="{{ user_profile.avatar.url }}" alt="" class="h-full w-full object-cover" width="36" height="36" />
+            <img src="{{ user_profile.avatar.url }}" alt="" class="h-full w-full object-cover" width="40" height="40" />
           {% else %}
             <span class="grid h-full w-full place-items-center">
               {% if request.user.first_name and request.user.last_name %}
@@ -83,15 +353,16 @@
             </span>
           {% endif %}
         </button>
+
         <div
           id="account-dropdown"
           role="menu"
           aria-labelledby="account-menu-trigger"
-          class="absolute bottom-0 left-full z-50 ml-2 hidden w-[min(20rem,calc(100vw-5.5rem))] rounded-3xl border border-zentrol-gray-100 bg-white p-6 shadow-[0_10px_40px_rgba(15,30,46,0.12)]"
+          class="surface absolute bottom-0 left-full z-50 ml-2 hidden w-[min(20rem,calc(100vw-5.5rem))] p-5"
         >
-          <p class="text-sm font-bold text-zentrol-gray-900">Account</p>
-          <div class="mt-4 flex items-start gap-3">
-            <div class="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-orange-500 text-sm font-bold text-white">
+          <p class="num">— account</p>
+          <div class="mt-3 flex items-start gap-3">
+            <div class="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-ink text-[13px] font-semibold text-paper">
               {% if user_profile.avatar %}
                 <img src="{{ user_profile.avatar.url }}" alt="" class="h-full w-full object-cover" width="48" height="48" />
               {% else %}
@@ -106,28 +377,28 @@
             </div>
             <div class="min-w-0 flex-1">
               {% if request.user.get_full_name %}
-                <p class="truncate text-sm font-bold uppercase tracking-wide text-zentrol-gray-900">{{ request.user.get_full_name }}</p>
+                <p class="truncate text-[14px] font-semibold text-ink">{{ request.user.get_full_name }}</p>
               {% else %}
-                <p class="truncate text-sm font-bold uppercase tracking-wide text-zentrol-gray-900">{{ request.user.username }}</p>
+                <p class="truncate text-[14px] font-semibold text-ink">{{ request.user.username }}</p>
               {% endif %}
-              <p class="mt-0.5 truncate text-sm text-zentrol-gray-500">{{ request.user.email|default:"—" }}</p>
+              <p class="mt-0.5 truncate text-[12.5px] text-mute">{{ request.user.email|default:"—" }}</p>
             </div>
             <button
               type="button"
               id="account-settings-open"
-              class="relative z-10 inline-flex shrink-0 cursor-pointer select-none items-center justify-center whitespace-nowrap rounded-full border border-sky-500 px-4 py-2.5 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-200 active:bg-sky-100"
+              class="btn-ghost !py-1.5 !px-3 text-[12px]"
               title="Account settings"
             >
               Settings
             </button>
           </div>
-          <div class="my-4 border-t border-zentrol-gray-200"></div>
+          <div class="my-4 hairline"></div>
           <form method="post" action="{% url 'logout' %}" class="m-0">
             {% csrf_token %}
             <button
               type="submit"
               role="menuitem"
-              class="flex w-full items-center gap-2 rounded-xl py-2 text-left text-sm font-medium text-red-500 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-100"
+              class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 shrink-0" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
@@ -140,22 +411,25 @@
     </div>
   </aside>
 
-  <!-- Account settings modal -->
+  <!-- ============== ACCOUNT SETTINGS MODAL (preserves all original IDs) ============== -->
   <div id="account-settings-modal" class="fixed inset-0 z-[100] hidden" aria-hidden="true" role="presentation">
-    <div id="account-settings-backdrop" class="absolute inset-0 bg-zentrol-navy-900/50 backdrop-blur-[2px]"></div>
+    <div id="account-settings-backdrop" class="absolute inset-0" style="background: rgba(27,26,24,0.45); backdrop-filter: blur(2px);"></div>
     <div class="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="account-settings-title"
-        class="pointer-events-auto flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white shadow-2xl"
+        class="surface pointer-events-auto flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col overflow-hidden"
       >
-        <div class="flex items-start justify-between border-b border-zentrol-gray-100 px-6 py-4">
-          <h2 id="account-settings-title" class="text-lg font-bold text-zentrol-navy-500">Account settings</h2>
+        <div class="flex items-start justify-between border-b border-line px-6 py-4">
+          <div>
+            <p class="num">— account</p>
+            <h2 id="account-settings-title" class="mt-1 text-lg font-semibold text-ink">Account settings</h2>
+          </div>
           <button
             type="button"
             id="account-settings-close"
-            class="rounded-lg p-1.5 text-zentrol-gray-500 transition hover:bg-zentrol-gray-100 hover:text-zentrol-navy-600 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-100"
+            class="icon-btn"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
@@ -164,13 +438,13 @@
           </button>
         </div>
 
-        <div class="border-b border-zentrol-gray-100 px-4 pt-3">
-          <div class="flex flex-wrap gap-2 pb-3" role="tablist">
-            <button type="button" role="tab" aria-selected="true" data-account-tab="basic" class="account-tab inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold sm:text-sm bg-sky-100 text-sky-900">
+        <div class="border-b border-line px-4 pt-3">
+          <div class="flex flex-wrap gap-1 pb-3" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-account-tab="basic" class="account-tab tab-pill is-active">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
               Basic info
             </button>
-            <button type="button" role="tab" aria-selected="false" data-account-tab="security" class="account-tab inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold sm:text-sm text-zentrol-navy-500 hover:bg-zentrol-gray-50">
+            <button type="button" role="tab" aria-selected="false" data-account-tab="security" class="account-tab tab-pill">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
               Sign in &amp; security
             </button>
@@ -184,151 +458,128 @@
                 {% csrf_token %}
                 <input type="hidden" name="return_filter" value="{{ active_filter }}" />
                 <input type="hidden" name="return_view" value="{{ view_mode }}" />
-              <div class="flex w-full flex-col items-center text-center lg:items-start lg:pl-10 xl:pl-14">
-                <div class="relative">
-                  <div class="relative h-28 w-28 overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-orange-500 shadow-md ring-2 ring-white">
-                    <img
-                      id="account-settings-avatar-img"
-                      src="{% if user_profile.avatar %}{{ user_profile.avatar.url }}{% endif %}"
-                      alt=""
-                      class="h-full w-full object-cover {% if not user_profile.avatar %}hidden{% endif %}"
-                      width="112"
-                      height="112"
-                    />
-                    <div id="account-settings-avatar-initials" class="grid h-full w-full place-items-center text-2xl font-bold text-white {% if user_profile.avatar %}hidden{% endif %}">
-                      {% if request.user.first_name and request.user.last_name %}
-                        {{ request.user.first_name|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
-                      {% else %}
-                        {{ request.user.username|slice:":2"|upper }}
-                      {% endif %}
+                <div class="flex w-full flex-col items-center text-center lg:items-start lg:pl-6 xl:pl-10">
+                  <div class="relative">
+                    <div class="relative h-28 w-28 overflow-hidden rounded-full bg-ink ring-2 ring-paper">
+                      <img
+                        id="account-settings-avatar-img"
+                        src="{% if user_profile.avatar %}{{ user_profile.avatar.url }}{% endif %}"
+                        alt=""
+                        class="h-full w-full object-cover {% if not user_profile.avatar %}hidden{% endif %}"
+                        width="112" height="112"
+                      />
+                      <div id="account-settings-avatar-initials" class="grid h-full w-full place-items-center text-[26px] font-semibold text-paper {% if user_profile.avatar %}hidden{% endif %}">
+                        {% if request.user.first_name and request.user.last_name %}
+                          {{ request.user.first_name|slice:":1"|upper }}{{ request.user.last_name|slice:":1"|upper }}
+                        {% else %}
+                          {{ request.user.username|slice:":2"|upper }}
+                        {% endif %}
+                      </div>
+                    </div>
+                    <label for="account-avatar-input" class="absolute bottom-0 right-0 grid h-9 w-9 cursor-pointer place-items-center rounded-full border-2 border-paper bg-accent text-paper transition hover:bg-accent2" title="Upload profile photo">
+                      <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only" id="account-avatar-input" />
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="pointer-events-none h-5 w-5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                      </svg>
+                    </label>
+                  </div>
+                  <p class="mt-4 text-sm font-semibold text-ink">
+                    <span id="account-display-name">
+                      {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}
+                    </span>
+                  </p>
+                  <hr class="mt-3 w-12 border-line lg:mx-0" />
+                  <div class="mt-3 w-full space-y-3">
+                    <div>
+                      <label for="account-username-display" class="mb-1 block text-[12.5px] font-medium text-ink2">Username</label>
+                      <input type="text" id="account-username-display" value="{{ request.user.username }}" disabled class="ink-input" />
                     </div>
                   </div>
-                  <label for="account-avatar-input" class="absolute bottom-0 right-0 grid h-9 w-9 cursor-pointer place-items-center rounded-full border-2 border-white bg-zentrol-teal-500 text-white shadow-md transition hover:bg-zentrol-teal-600" title="Upload profile photo">
-                    <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only" id="account-avatar-input" />
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="pointer-events-none size-6" aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                    </svg>
-                  </label>
                 </div>
-                <p class="mt-4 text-sm font-bold uppercase tracking-wide text-zentrol-navy-500">
-                  <span id="account-display-name">
-                    {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}
-                  </span>
-                </p>
-                <hr class="mt-3 w-12 border-zentrol-gray-200 lg:mx-0" />
-
-                <div class="mt-3 w-full space-y-3">
+                <div class="space-y-4">
                   <div>
-                    <label for="account-username-display" class="mb-1 block text-sm font-medium text-zentrol-navy-500">Username</label>
-                    <input
-                      type="text"
-                      id="account-username-display"
-                      value="{{ request.user.username }}"
-                      disabled
-                      class="w-full cursor-not-allowed rounded-lg border border-zentrol-gray-200 bg-zentrol-gray-50 px-3 py-2 text-sm text-zentrol-gray-500 shadow-sm"
-                    />
+                    <label for="id_first_name" class="mb-1 block text-[12.5px] font-medium text-ink2">First name</label>
+                    <input type="text" name="first_name" id="id_first_name" maxlength="150" value="{{ request.user.first_name }}" class="ink-input" />
+                  </div>
+                  <div>
+                    <label for="id_last_name" class="mb-1 block text-[12.5px] font-medium text-ink2">Last name</label>
+                    <input type="text" name="last_name" id="id_last_name" maxlength="150" value="{{ request.user.last_name }}" class="ink-input" />
+                  </div>
+                  <div>
+                    <label for="account-email-edit" class="mb-1 block text-[12.5px] font-medium text-ink2">Email</label>
+                    <input type="email" name="email" id="account-email-edit" maxlength="254" value="{{ request.user.email|default:'' }}" class="ink-input" />
                   </div>
                 </div>
-              </div>
-              <div class="space-y-4">
-                <div>
-                  <label for="id_first_name" class="mb-1 block text-sm font-medium text-zentrol-navy-500">First name</label>
-                  <input type="text" name="first_name" id="id_first_name" maxlength="150" value="{{ request.user.first_name }}"
-                         class="w-full rounded-lg border border-zentrol-gray-200 bg-white px-3 py-2 text-sm text-zentrol-navy-500 shadow-sm focus:border-zentrol-teal-400 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-100" />
-                </div>
-                <div>
-                  <label for="id_last_name" class="mb-1 block text-sm font-medium text-zentrol-navy-500">Last name</label>
-                  <input type="text" name="last_name" id="id_last_name" maxlength="150" value="{{ request.user.last_name }}"
-                         class="w-full rounded-lg border border-zentrol-gray-200 bg-white px-3 py-2 text-sm text-zentrol-navy-500 shadow-sm focus:border-zentrol-teal-400 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-100" />
-                </div>
-
-                <div>
-                  <label for="account-email-edit" class="mb-1 block text-sm font-medium text-zentrol-navy-500">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    id="account-email-edit"
-                    maxlength="254"
-                    value="{{ request.user.email|default:'' }}"
-                    class="w-full rounded-lg border border-zentrol-gray-200 bg-white px-3 py-2 text-sm text-zentrol-navy-500 shadow-sm focus:border-zentrol-teal-400 focus:outline-none focus:ring-2 focus:ring-zentrol-teal-100"
-                  />
-                </div>
-              </div>
               </form>
             </div>
 
-            <div data-account-panel="security" class="account-panel hidden space-y-0 text-zentrol-navy-500">
+            <div data-account-panel="security" class="account-panel hidden text-ink">
               <!-- Authentication -->
-              <div class="border-b border-zentrol-gray-200 pb-6">
-                <h3 class="flex items-center gap-2 text-sm font-bold text-zentrol-navy-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-zentrol-gray-600"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
+              <div class="border-b border-line pb-6">
+                <h3 class="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-mute"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" /></svg>
                   Authentication
                 </h3>
                 <div class="mt-4 flex items-center justify-between gap-3">
-                  <span class="text-sm text-zentrol-gray-600">Sign in method</span>
+                  <span class="text-sm text-ink2">Sign in method</span>
                   {% if request.user.has_usable_password %}
-                    <a href="{% url 'password_change' %}" class="text-sm font-semibold text-sky-600 hover:text-sky-700">Change password</a>
+                    <a href="{% url 'password_change' %}" class="text-sm font-semibold text-accent2 hover:text-accent">Change password</a>
                   {% else %}
-                    <a href="{% url 'password_reset' %}" class="text-sm font-semibold text-sky-600 hover:text-sky-700">Add password</a>
+                    <a href="{% url 'password_reset' %}" class="text-sm font-semibold text-accent2 hover:text-accent">Add password</a>
                   {% endif %}
                 </div>
-                <div class="mt-3 flex items-center gap-3 rounded-xl border border-zentrol-gray-200 bg-white px-4 py-3.5">
+                <div class="mt-3 flex items-center gap-3 rounded-xl border border-line bg-paper px-4 py-3">
                   {% if 'gmail.com' in request.user.email|default:''|lower or 'googlemail.com' in request.user.email|default:''|lower %}
-                  <svg viewBox="0 0 24 24" class="h-8 w-8 shrink-0" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    <svg viewBox="0 0 24 24" class="h-7 w-7 shrink-0" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                   {% else %}
-                  <div class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-zentrol-teal-100 text-zentrol-teal-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
-                  </div>
+                    <div class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accentSoft text-accent2">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg>
+                    </div>
                   {% endif %}
-                  <span class="min-w-0 flex-1 truncate text-sm font-medium text-zentrol-navy-500">{{ request.user.email|default:"No email on file" }}</span>
+                  <span class="min-w-0 flex-1 truncate text-sm font-medium text-ink">{{ request.user.email|default:"No email on file" }}</span>
                 </div>
               </div>
 
               <!-- Devices and sessions -->
-              <div class="border-b border-zentrol-gray-200 py-6">
-                <h3 class="flex items-center gap-2 text-sm font-bold text-zentrol-navy-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-zentrol-gray-600"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" /></svg>
+              <div class="border-b border-line py-6">
+                <h3 class="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-mute"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" /></svg>
                   Devices and sessions
                 </h3>
-
                 <div class="mt-4 space-y-3">
                   <form method="post" action="{% url 'logout_all_sessions' %}">
                     {% csrf_token %}
-                    <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-sky-500 bg-white px-4 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-200">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
+                    <button type="submit" class="btn-ghost w-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" /></svg>
                       Sign out of all devices
                     </button>
                   </form>
 
                   <div class="space-y-2">
                     {% for sess in user_sessions %}
-                      <div class="flex items-center justify-between gap-3 rounded-xl border border-zentrol-gray-200 bg-white px-4 py-3">
+                      <div class="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper px-4 py-3">
                         <div class="min-w-0">
-                          <p class="truncate text-sm font-semibold text-zentrol-gray-800">
+                          <p class="truncate text-sm font-semibold text-ink">
                             {% if sess.is_current %}This device{% else %}Signed in session{% endif %}
                           </p>
-                          <p class="mt-0.5 text-xs text-zentrol-gray-500">
+                          <p class="mt-0.5 text-[11.5px] text-mute">
                             Expires {{ sess.expire_date|date:"M j, H:i" }}
                           </p>
                         </div>
-
                         {% if sess.is_current %}
-                          <span class="shrink-0 rounded-full bg-zentrol-gray-100 px-3 py-1 text-xs font-semibold text-zentrol-gray-600">Current</span>
+                          <span class="num shrink-0">current</span>
                         {% else %}
                           <form method="post" action="{% url 'logout_single_session' sess.session_key %}">
                             {% csrf_token %}
-                            <button
-                              type="submit"
-                              class="shrink-0 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
-                            >
+                            <button type="submit" class="shrink-0 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-[12px] font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200">
                               Remove
                             </button>
                           </form>
                         {% endif %}
                       </div>
                     {% empty %}
-                      <p class="text-sm text-zentrol-gray-600">No active sessions found.</p>
+                      <p class="text-sm text-ink2">No active sessions found.</p>
                     {% endfor %}
                   </div>
                 </div>
@@ -336,7 +587,7 @@
 
               <!-- Danger zone -->
               <div class="pt-6">
-                <h3 class="flex items-center gap-2 text-sm font-bold text-zentrol-navy-500">
+                <h3 class="flex items-center gap-2 text-[13px] font-semibold text-ink">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-amber-600"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
                   Danger zone
                 </h3>
@@ -346,58 +597,33 @@
                   <button
                     type="button"
                     id="account-delete-open"
-                    class="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+                    class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-[13px] font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                     Delete my account
                   </button>
                 </form>
 
-                <!-- Delete confirmation modal -->
                 <div id="account-delete-confirm-modal" class="fixed inset-0 z-[120] hidden" aria-hidden="true" role="presentation">
-                  <div id="account-delete-backdrop" class="absolute inset-0 bg-zentrol-navy-900/50 backdrop-blur-[2px]"></div>
+                  <div id="account-delete-backdrop" class="absolute inset-0" style="background: rgba(27,26,24,0.45); backdrop-filter: blur(2px);"></div>
                   <div class="relative flex min-h-full items-center justify-center p-4">
-                    <div
-                      role="dialog"
-                      aria-modal="true"
-                      aria-labelledby="account-delete-title"
-                      class="w-full max-w-lg overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white shadow-2xl"
-                    >
-                      <div class="flex items-start justify-between border-b border-zentrol-gray-100 px-6 py-4">
-                        <h3 id="account-delete-title" class="text-lg font-bold text-zentrol-navy-500">
-                          Delete account
-                        </h3>
-                        <button
-                          type="button"
-                          id="account-delete-cancel"
-                          class="rounded-lg p-1.5 text-zentrol-gray-500 transition hover:bg-zentrol-gray-100 hover:text-zentrol-navy-600 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-100"
-                          aria-label="Cancel"
-                        >
+                    <div role="dialog" aria-modal="true" aria-labelledby="account-delete-title" class="surface w-full max-w-lg overflow-hidden">
+                      <div class="flex items-start justify-between border-b border-line px-6 py-4">
+                        <h3 id="account-delete-title" class="text-lg font-semibold text-ink">Delete account</h3>
+                        <button type="button" id="account-delete-cancel" class="icon-btn" aria-label="Cancel">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                           </svg>
                         </button>
                       </div>
                       <div class="px-6 py-5">
-                        <p class="text-sm text-zentrol-gray-600">
+                        <p class="text-sm text-ink2">
                           This action cannot be undone. Your account and all related data will be permanently deleted.
                         </p>
                       </div>
-                      <div class="flex justify-end gap-3 border-t border-zentrol-gray-100 bg-zentrol-gray-50/80 px-6 py-4">
-                        <button
-                          type="button"
-                          class="rounded-full border border-zentrol-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-zentrol-navy-500 hover:bg-zentrol-gray-50 focus:outline-none focus:ring-2 focus:ring-zentrol-gray-100"
-                          id="account-delete-cancel-2"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          form="delete-account-form"
-                          class="rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
-                        >
-                          Delete
-                        </button>
+                      <div class="flex justify-end gap-3 border-t border-line px-6 py-4">
+                        <button type="button" class="btn-ghost" id="account-delete-cancel-2">Cancel</button>
+                        <button type="submit" form="delete-account-form" class="btn-primary !bg-red-600 !border-red-600 hover:!bg-red-700">Delete</button>
                       </div>
                     </div>
                   </div>
@@ -406,72 +632,101 @@
             </div>
           </div>
 
-          <div class="flex justify-end border-t border-zentrol-gray-100 bg-zentrol-gray-50/80 px-6 py-4">
-            <button type="submit" form="account-profile-form" class="rounded-full bg-zentrol-navy-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zentrol-navy-600 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-200">
-              Done
-            </button>
+          <div class="flex justify-end border-t border-line bg-paper px-6 py-4">
+            <button type="submit" form="account-profile-form" class="btn-primary">Done</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <main class="ml-20 min-h-screen p-5 md:p-7">
+
+  <!-- ============== MAIN ============== -->
+  <main class="ml-20 min-h-screen px-6 py-8 sm:px-10 sm:py-10 lg:px-14">
+
     {% if messages %}
-    <div class="mb-4 space-y-2" role="status">
-      {% for message in messages %}
-      <p class="rounded-lg border px-4 py-2 text-sm {% if 'error' in message.tags %}border-red-200 bg-red-50 text-red-800{% elif 'warning' in message.tags %}border-amber-200 bg-amber-50 text-amber-900{% else %}border-zentrol-teal-200 bg-zentrol-teal-50 text-zentrol-teal-900{% endif %}">{{ message }}</p>
-      {% endfor %}
-    </div>
+      <div class="mb-6 space-y-2" role="status">
+        {% for message in messages %}
+          <p class="rounded-xl border px-4 py-2.5 text-sm
+                    {% if 'error' in message.tags %}border-red-200 bg-red-50/70 text-red-700
+                    {% elif 'warning' in message.tags %}border-amber-200 bg-amber-50/70 text-amber-800
+                    {% else %}border-line bg-sand text-ink2{% endif %}">
+            {{ message }}
+          </p>
+        {% endfor %}
+      </div>
     {% endif %}
-    <header class="border-b border-zentrol-gray-200 pb-4">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-          <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-6 w-6 rounded" />
-          <span class="text-xl font-semibold">Zentrol Workspace</span>
-        </div>
-        <div class="flex items-center gap-4 text-sm text-zentrol-gray-600">
-          <button id="search-btn" type="button" title="Search command icon + k" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-zentrol-navy-500 transition hover:bg-zentrol-navy-50 hover:text-zentrol-navy-600 focus:outline-none focus:ring-2 focus:ring-zentrol-navy-100" aria-label="Search">
-            <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="magnifying-glass" class="h-4 w-4" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M368 208A160 160 0 1 0 48 208a160 160 0 1 0 320 0zM337.1 371.1C301.7 399.2 256.8 416 208 416C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208c0 48.8-16.8 93.7-44.9 129.1L505 471c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L337.1 371.1z"></path></svg>
+
+    <!-- Editorial header -->
+    <header class="grid grid-cols-12 items-end gap-6 pb-8">
+      <div class="col-span-12 lg:col-span-8">
+        <span class="num">— workspace</span>
+        <h1 class="display mt-3">
+          {% if request.user.first_name %}Hello, {{ request.user.first_name }}.<br/><em>What's on the deck?</em>
+          {% else %}Your decks,<br/><em>ready when you are.</em>{% endif %}
+        </h1>
+        <p class="mt-4 max-w-[52ch] text-[15.5px] leading-relaxed text-ink2">
+          Upload a presentation, then open it to present hands-free with gestures and live narration. Files are processed in your browser.
+        </p>
+      </div>
+      <div class="col-span-12 flex flex-col gap-3 lg:col-span-4">
+        <div class="flex flex-wrap items-center justify-end gap-3">
+          <button id="search-btn" type="button" title="Search · ⌘K" class="icon-btn !h-10 !w-10" aria-label="Search">
+            <svg aria-hidden="true" focusable="false" class="h-4 w-4" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M368 208A160 160 0 1 0 48 208a160 160 0 1 0 320 0zM337.1 371.1C301.7 399.2 256.8 416 208 416C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208c0 48.8-16.8 93.7-44.9 129.1L505 471c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L337.1 371.1z"></path></svg>
+          </button>
+          <button id="upload-btn" class="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Upload presentation
           </button>
         </div>
-      </div>
-      <div class="mt-4 flex flex-wrap items-center gap-2">
-        <button id="upload-btn" class="rounded-full bg-zentrol-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zentrol-navy-600">+ Upload presentation</button>
+        <section id="upload-status" class="surface hidden w-full p-4 lg:max-w-md lg:self-end" aria-live="polite" aria-atomic="true" aria-label="Upload progress">
+          <div class="flex items-center justify-between text-sm">
+            <span id="upload-progress-label" class="font-medium text-ink">Processing…</span>
+            <span id="upload-progress-pct" class="font-mono tnum text-accent2">0%</span>
+          </div>
+          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-paperDeep">
+            <div id="upload-progress-bar" class="h-full w-0 rounded-full"></div>
+          </div>
+          <p id="upload-error-text" class="mt-2 hidden text-sm text-red-600"></p>
+        </section>
       </div>
     </header>
 
-    <section class="mt-5">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="inline-flex flex-wrap items-center gap-2 rounded-full bg-zentrol-gray-100 p-1 text-sm">
-          <a href="?filter=all&view={{ view_mode }}" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 {% if active_filter == 'all' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 shrink-0" aria-hidden="true">
+    <div class="hairline"></div>
+
+    <!-- Toolbar: filters + view -->
+    <section class="mt-6">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div class="inline-flex flex-wrap items-center gap-1 rounded-full border border-line bg-sand p-1">
+          <a href="?filter=all&view={{ view_mode }}" class="filter-pill {% if active_filter == 'all' %}is-active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 shrink-0" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m0 0a2.246 2.246 0 0 0-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0 1 21 12v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6c0-.98.626-1.813 1.5-2.122" />
             </svg>
             <span>All</span>
           </a>
-          <a href="?filter=recent&view={{ view_mode }}" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 {% if active_filter == 'recent' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 shrink-0" aria-hidden="true">
+          <a href="?filter=recent&view={{ view_mode }}" class="filter-pill {% if active_filter == 'recent' %}is-active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 shrink-0" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
             <span>Recently viewed</span>
           </a>
-          <a href="?filter=created&view={{ view_mode }}" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 {% if active_filter == 'created' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 shrink-0" aria-hidden="true">
+          <a href="?filter=created&view={{ view_mode }}" class="filter-pill {% if active_filter == 'created' %}is-active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 shrink-0" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
             </svg>
             <span>Created by you</span>
           </a>
-          <a href="?filter=favorites&view={{ view_mode }}" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 {% if active_filter == 'favorites' %}bg-zentrol-teal-100 text-zentrol-teal-800 ring-1 ring-zentrol-teal-200{% else %}text-zentrol-gray-600{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 shrink-0" aria-hidden="true">
+          <a href="?filter=favorites&view={{ view_mode }}" class="filter-pill {% if active_filter == 'favorites' %}is-active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 shrink-0" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
             </svg>
             <span>Favorites</span>
           </a>
         </div>
-        <div class="inline-flex items-center gap-2 rounded-full bg-zentrol-gray-100 p-1 text-sm">
-          <a href="?filter={{ active_filter }}&view=grid" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 {% if view_mode == 'grid' %}bg-zentrol-navy-500 text-white{% else %}text-zentrol-gray-600{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" class="size-6 shrink-0" aria-hidden="true">
+
+        <div class="inline-flex items-center gap-1 rounded-full border border-line bg-sand p-1">
+          <a href="?filter={{ active_filter }}&view=grid" class="tab-pill {% if view_mode == 'grid' %}is-active{% endif %}" title="Grid view">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" class="h-4 w-4 shrink-0" aria-hidden="true">
               <path d="M3.88884 9.66294C4.39329 10 5.09552 10 6.49998 10C7.90445 10 8.60668 10 9.11113 9.66294C9.32951 9.51702 9.51701 9.32952 9.66292 9.11114C9.99998 8.60669 9.99998 7.90446 9.99998 6.5C9.99998 5.09554 9.99998 4.39331 9.66292 3.88886C9.51701 3.67048 9.32951 3.48298 9.11113 3.33706C8.60668 3 7.90445 3 6.49998 3C5.09552 3 4.39329 3 3.88884 3.33706C3.67046 3.48298 3.48296 3.67048 3.33705 3.88886C2.99998 4.39331 2.99998 5.09554 2.99998 6.5C2.99998 7.90446 2.99998 8.60669 3.33705 9.11114C3.48296 9.32952 3.67046 9.51702 3.88884 9.66294Z" />
               <path d="M14.8888 9.66294C15.3933 10 16.0955 10 17.5 10C18.9044 10 19.6067 10 20.1111 9.66294C20.3295 9.51702 20.517 9.32952 20.6629 9.11114C21 8.60669 21 7.90446 21 6.5C21 5.09554 21 4.39331 20.6629 3.88886C20.517 3.67048 20.3295 3.48298 20.1111 3.33706C19.6067 3 18.9044 3 17.5 3C16.0955 3 15.3933 3 14.8888 3.33706C14.6705 3.48298 14.483 3.67048 14.337 3.88886C14 4.39331 14 5.09554 14 6.5C14 7.90446 14 8.60669 14.337 9.11114C14.483 9.32952 14.6705 9.51702 14.8888 9.66294Z" />
               <path d="M3.88884 20.6629C4.39329 21 5.09552 21 6.49998 21C7.90445 21 8.60668 21 9.11113 20.6629C9.32951 20.517 9.51701 20.3295 9.66292 20.1111C9.99998 19.6067 9.99998 18.9045 9.99998 17.5C9.99998 16.0955 9.99998 15.3933 9.66292 14.8889C9.51701 14.6705 9.32951 14.483 9.11113 14.3371C8.60668 14 7.90445 14 6.49998 14C5.09552 14 4.39329 14 3.88884 14.3371C3.67046 14.483 3.48296 14.6705 3.33705 14.8889C2.99998 15.3933 2.99998 16.0955 2.99998 17.5C2.99998 18.9045 2.99998 19.6067 3.33705 20.1111C3.48296 20.3295 3.67046 20.517 3.88884 20.6629Z" />
@@ -479,8 +734,8 @@
             </svg>
             <span>Grid</span>
           </a>
-          <a href="?filter={{ active_filter }}&view=list" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 {% if view_mode == 'list' %}bg-zentrol-navy-500 text-white{% else %}text-zentrol-gray-600{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="size-6 shrink-0" aria-hidden="true">
+          <a href="?filter={{ active_filter }}&view=list" class="tab-pill {% if view_mode == 'list' %}is-active{% endif %}" title="List view">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="h-4 w-4 shrink-0" aria-hidden="true">
               <path d="M2 11.4C2 10.2417 2.24173 10 3.4 10H20.6C21.7583 10 22 10.2417 22 11.4V12.6C22 13.7583 21.7583 14 20.6 14H3.4C2.24173 14 2 13.7583 2 12.6V11.4Z" />
               <path d="M2 3.4C2 2.24173 2.24173 2 3.4 2H20.6C21.7583 2 22 2.24173 22 3.4V4.6C22 5.75827 21.7583 6 20.6 6H3.4C2.24173 6 2 5.75827 2 4.6V3.4Z" />
               <path d="M2 19.4C2 18.2417 2.24173 18 3.4 18H20.6C21.7583 18 22 18.2417 22 19.4V20.6C22 21.7583 21.7583 22 20.6 22H3.4C2.24173 22 2 21.7583 2 20.6V19.4Z" />
@@ -492,277 +747,318 @@
 
       {% if assets %}
         {% if view_mode == 'grid' %}
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {% for asset in assets %}
-          <article
-            class="group relative cursor-pointer overflow-visible rounded-2xl border border-zentrol-gray-200 bg-white transition hover:-translate-y-0.5"
-            data-card-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
-            tabindex="0"
-            role="link"
-            aria-label="Open {{ asset.title }}"
-          >
-            {% with first=asset.slides_json.0 %}
-              {% if first.imageUrl %}
-                <img src="{{ first.imageUrl }}" alt="{{ asset.title }}" class="h-44 w-full rounded-t-2xl object-cover" />
-              {% else %}
-                <div class="grid h-44 place-items-center rounded-t-2xl bg-gradient-to-br from-zentrol-navy-50 to-zentrol-teal-50 text-slate-500">No preview</div>
-              {% endif %}
-            {% endwith %}
-            <div class="border-t border-zentrol-gray-200 p-4">
-              <div class="flex items-start justify-between gap-2">
-                <h2 class="text-[20px] font-medium leading-tight text-zentrol-gray-800">{{ asset.title }}</h2>
-              </div>
-              <div class="mt-10 flex items-center justify-between">
-                <p class="text-[14px] text-zentrol-gray-400">{{ asset.slide_count }} slides</p>
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    data-fav-btn
-                    data-asset-id="{{ asset.id }}"
-                    data-favorite-url="{% url 'toggle_favorite' asset.id %}"
-                    data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-zentrol-gray-400 hover:bg-zentrol-gray-100 hover:text-zentrol-gray-600"
-                    title="{% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}"
-                    aria-label="Toggle favorite"
-                  >
-                    <svg viewBox="0 0 24 24" class="h-4 w-4 {% if asset.is_favorite %}fav-on{% endif %}" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                      <path d="M12 3.6l2.58 5.22 5.76.84-4.17 4.06.98 5.73L12 16.74 6.85 19.45l.98-5.73-4.17-4.06 5.76-.84L12 3.6z"></path>
-                    </svg>
-                  </button>
-
-                  <div class="relative">
-                    <button
-                      type="button"
-                      data-card-menu-btn
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-full text-zentrol-gray-400 hover:bg-zentrol-gray-100 hover:text-zentrol-gray-600"
-                      aria-label="More options"
-                    >
-                      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
-                        <circle cx="5" cy="12" r="1.9"></circle>
-                        <circle cx="12" cy="12" r="1.9"></circle>
-                        <circle cx="19" cy="12" r="1.9"></circle>
-                      </svg>
-                    </button>
-                    <div data-card-menu class="absolute right-0 bottom-8 z-30 hidden min-w-44 overflow-hidden rounded-xl border border-zentrol-gray-200 bg-white py-1 shadow-xl">
-                      <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="block px-3 py-2 text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50">Open</a>
-                      <button type="button" class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-400 hover:bg-zentrol-gray-50" disabled>Share...</button>
-                      <button type="button" class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-400 hover:bg-zentrol-gray-50" disabled>Rename...</button>
-                      <button type="button" class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-400 hover:bg-zentrol-gray-50" disabled>Duplicate</button>
+          <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {% for asset in assets %}
+              <article
+                class="asset-card group relative cursor-pointer overflow-visible"
+                data-card-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
+                tabindex="0"
+                role="link"
+                aria-label="Open {{ asset.title }}"
+              >
+                {% with first=asset.slides_json.0 %}
+                  {% if first.imageUrl %}
+                    <img src="{{ first.imageUrl }}" alt="{{ asset.title }}" class="asset-thumb h-44 w-full object-cover" />
+                  {% else %}
+                    <div class="asset-thumb grid h-44 w-full place-items-center bg-paperDeep text-mute">
+                      <span class="num">no preview</span>
+                    </div>
+                  {% endif %}
+                {% endwith %}
+                <div class="border-t border-line p-4">
+                  <div class="flex items-start justify-between gap-2">
+                    <h2 class="text-[16.5px] font-medium leading-snug tracking-tight text-ink">{{ asset.title }}</h2>
+                  </div>
+                  <div class="mt-7 flex items-center justify-between">
+                    <p class="num tnum">{{ asset.slide_count }} slides</p>
+                    <div class="menu-host flex items-center gap-1">
                       <button
                         type="button"
                         data-fav-btn
                         data-asset-id="{{ asset.id }}"
                         data-favorite-url="{% url 'toggle_favorite' asset.id %}"
                         data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
-                        class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50"
+                        class="icon-btn !h-8 !w-8"
+                        title="{% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}"
+                        aria-label="Toggle favorite"
                       >
-                        {% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}
+                        <svg viewBox="0 0 24 24" class="h-4 w-4 {% if asset.is_favorite %}fav-on{% endif %}" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                          <path d="M12 3.6l2.58 5.22 5.76.84-4.17 4.06.98 5.73L12 16.74 6.85 19.45l.98-5.73-4.17-4.06 5.76-.84L12 3.6z"></path>
+                        </svg>
                       </button>
-                      <button
-                        type="button"
-                        data-copy-link-btn
-                        data-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
-                        class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50"
-                      >
-                        Copy link
-                      </button>
-                      <button
-                        type="button"
-                        data-delete-btn
-                        data-delete-url="{% url 'delete_presentation' asset.id %}"
-                        data-asset-title="{{ asset.title|escape }}"
-                        class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                      >
-                        Send to trash
-                      </button>
+
+                      <div class="relative">
+                        <button
+                          type="button"
+                          data-card-menu-btn
+                          class="icon-btn !h-8 !w-8"
+                          aria-label="More options"
+                        >
+                          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                            <circle cx="5" cy="12" r="1.7"></circle>
+                            <circle cx="12" cy="12" r="1.7"></circle>
+                            <circle cx="19" cy="12" r="1.7"></circle>
+                          </svg>
+                        </button>
+                        <div data-card-menu class="card-menu absolute right-0 bottom-9 z-30 hidden min-w-44 overflow-hidden py-1">
+                          <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="block px-3 py-2 text-[13px] text-ink">Open</a>
+                          <button
+                            type="button"
+                            data-fav-btn
+                            data-asset-id="{{ asset.id }}"
+                            data-favorite-url="{% url 'toggle_favorite' asset.id %}"
+                            data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
+                            class="block w-full px-3 py-2 text-left text-[13px] text-ink"
+                          >
+                            {% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}
+                          </button>
+                          <button
+                            type="button"
+                            data-copy-link-btn
+                            data-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
+                            class="block w-full px-3 py-2 text-left text-[13px] text-ink"
+                          >
+                            Copy link
+                          </button>
+                          <button
+                            type="button"
+                            data-delete-btn
+                            data-delete-url="{% url 'delete_presentation' asset.id %}"
+                            data-asset-title="{{ asset.title|escape }}"
+                            class="danger block w-full px-3 py-2 text-left text-[13px] text-red-600"
+                          >
+                            Send to trash
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </article>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="overflow-visible bg-transparent">
-          <div class="grid grid-cols-[44px_minmax(0,1fr)_180px_220px_36px] items-center border-b border-zentrol-gray-200 px-4 py-2 text-xs font-semibold tracking-wide text-zentrol-gray-500">
-            <span></span>
-            <span>Title</span>
-            <span class="inline-flex items-center gap-1">Last viewed
-              <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M6 8l4 4 4-4"></path>
-              </svg>
-            </span>
-            <span>Creator</span>
-            <span></span>
+              </article>
+            {% endfor %}
           </div>
-          {% for asset in assets %}
-            <div
-              class="grid cursor-pointer grid-cols-[44px_minmax(0,1fr)_180px_220px_36px] items-center border-b border-zentrol-gray-200 px-4 py-2.5 transition hover:bg-zentrol-gray-50"
-              data-card-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
-              tabindex="0"
-              role="link"
-              aria-label="Open {{ asset.title }}"
-            >
-              <div class="inline-flex items-center justify-center">
-                <button
-                  type="button"
-                  data-fav-btn
-                  data-asset-id="{{ asset.id }}"
-                  data-favorite-url="{% url 'toggle_favorite' asset.id %}"
-                  data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-full text-zentrol-gray-400 hover:bg-zentrol-gray-100 hover:text-zentrol-gray-600"
-                  title="{% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}"
-                  aria-label="Toggle favorite"
-                >
-                  <svg viewBox="0 0 24 24" class="h-4 w-4 {% if asset.is_favorite %}fav-on{% endif %}" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <path d="M12 3.6l2.58 5.22 5.76.84-4.17 4.06.98 5.73L12 16.74 6.85 19.45l.98-5.73-4.17-4.06 5.76-.84L12 3.6z"></path>
-                  </svg>
-                </button>
-              </div>
-
-              <div class="min-w-0">
-                <p class="truncate text-sm font-medium text-zentrol-gray-800">{{ asset.title }}</p>
-              </div>
-
-              <p class="text-sm text-zentrol-gray-600">{{ asset.updated_at|timesince }} ago</p>
-
-              <div class="flex min-w-0 items-center gap-2">
-                <span class="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-orange-100 text-[10px] font-semibold text-orange-700">
-                  {% if user_profile.avatar %}
-                    <img src="{{ user_profile.avatar.url }}" alt="" class="h-full w-full object-cover" width="24" height="24" />
-                  {% else %}
-                    <span class="grid h-full w-full place-items-center">{{ request.user.username|slice:":1"|upper }}</span>
-                  {% endif %}
-                </span>
-                <span class="truncate text-sm text-zentrol-gray-700">{{ request.user.username|upper }}</span>
-              </div>
-
-              <div class="relative">
-                <button
-                  type="button"
-                  data-card-menu-btn
-                  class="inline-flex h-7 w-7 items-center justify-center rounded-full text-zentrol-gray-400 hover:bg-zentrol-gray-100 hover:text-zentrol-gray-600"
-                  aria-label="More options"
-                >
-                  <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
-                    <circle cx="5" cy="12" r="1.9"></circle>
-                    <circle cx="12" cy="12" r="1.9"></circle>
-                    <circle cx="19" cy="12" r="1.9"></circle>
-                  </svg>
-                </button>
-                <div data-card-menu class="absolute right-0 bottom-8 z-20 hidden min-w-44 overflow-hidden rounded-xl border border-zentrol-gray-200 bg-white py-1 shadow-xl">
-                  <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="block px-3 py-2 text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50">Open</a>
+        {% else %}
+          <div class="overflow-visible">
+            <div class="num grid grid-cols-[44px_minmax(0,1fr)_180px_220px_36px] items-center border-b border-line px-4 py-2.5">
+              <span></span>
+              <span>title</span>
+              <span class="inline-flex items-center gap-1">last viewed
+                <svg viewBox="0 0 20 20" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path d="M6 8l4 4 4-4"></path>
+                </svg>
+              </span>
+              <span>creator</span>
+              <span></span>
+            </div>
+            {% for asset in assets %}
+              <div
+                class="list-row grid cursor-pointer grid-cols-[44px_minmax(0,1fr)_180px_220px_36px] items-center px-4 py-3"
+                data-card-open-url="{% url 'presentation' %}?asset={{ asset.id }}"
+                tabindex="0"
+                role="link"
+                aria-label="Open {{ asset.title }}"
+              >
+                <div class="inline-flex items-center justify-center">
                   <button
                     type="button"
                     data-fav-btn
                     data-asset-id="{{ asset.id }}"
                     data-favorite-url="{% url 'toggle_favorite' asset.id %}"
                     data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
-                    class="block w-full px-3 py-2 text-left text-sm text-zentrol-gray-700 hover:bg-zentrol-gray-50"
+                    class="icon-btn !h-8 !w-8"
+                    title="{% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}"
+                    aria-label="Toggle favorite"
                   >
-                    {% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}
-                  </button>
-                  <button
-                    type="button"
-                    data-delete-btn
-                    data-delete-url="{% url 'delete_presentation' asset.id %}"
-                    data-asset-title="{{ asset.title|escape }}"
-                    class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                  >
-                    Send to trash
+                    <svg viewBox="0 0 24 24" class="h-4 w-4 {% if asset.is_favorite %}fav-on{% endif %}" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                      <path d="M12 3.6l2.58 5.22 5.76.84-4.17 4.06.98 5.73L12 16.74 6.85 19.45l.98-5.73-4.17-4.06 5.76-.84L12 3.6z"></path>
+                    </svg>
                   </button>
                 </div>
+
+                <div class="min-w-0">
+                  <p class="truncate text-[14.5px] font-medium text-ink">{{ asset.title }}</p>
+                </div>
+
+                <p class="text-[13px] text-ink2">{{ asset.updated_at|timesince }} ago</p>
+
+                <div class="flex min-w-0 items-center gap-2">
+                  <span class="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-ink text-[10px] font-semibold text-paper">
+                    {% if user_profile.avatar %}
+                      <img src="{{ user_profile.avatar.url }}" alt="" class="h-full w-full object-cover" width="28" height="28" />
+                    {% else %}
+                      <span class="grid h-full w-full place-items-center">{{ request.user.username|slice:":1"|upper }}</span>
+                    {% endif %}
+                  </span>
+                  <span class="truncate text-[13px] text-ink2">{{ request.user.username }}</span>
+                </div>
+
+                <div class="relative">
+                  <button
+                    type="button"
+                    data-card-menu-btn
+                    class="icon-btn !h-7 !w-7"
+                    aria-label="More options"
+                  >
+                    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+                      <circle cx="5" cy="12" r="1.7"></circle>
+                      <circle cx="12" cy="12" r="1.7"></circle>
+                      <circle cx="19" cy="12" r="1.7"></circle>
+                    </svg>
+                  </button>
+                  <div data-card-menu class="card-menu absolute right-0 bottom-9 z-20 hidden min-w-44 overflow-hidden py-1">
+                    <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="block px-3 py-2 text-[13px] text-ink">Open</a>
+                    <button
+                      type="button"
+                      data-fav-btn
+                      data-asset-id="{{ asset.id }}"
+                      data-favorite-url="{% url 'toggle_favorite' asset.id %}"
+                      data-is-favorite="{% if asset.is_favorite %}1{% else %}0{% endif %}"
+                      class="block w-full px-3 py-2 text-left text-[13px] text-ink"
+                    >
+                      {% if asset.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}
+                    </button>
+                    <button
+                      type="button"
+                      data-delete-btn
+                      data-delete-url="{% url 'delete_presentation' asset.id %}"
+                      data-asset-title="{{ asset.title|escape }}"
+                      class="danger block w-full px-3 py-2 text-left text-[13px] text-red-600"
+                    >
+                      Send to trash
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          {% endfor %}
-        </div>
+            {% endfor %}
+          </div>
         {% endif %}
       {% else %}
-        <div class="rounded-2xl border border-dashed border-zentrol-gray-300 bg-white px-6 py-10 text-center text-sm text-zentrol-gray-500">
-          No presentations yet. Click <span class="font-medium">Upload presentation</span> to add one.
+        <div class="empty-frame px-8 py-14 text-center">
+          <p class="num">— nothing here yet</p>
+          <h2 class="display mt-4" style="font-size: clamp(28px, 3.6vw, 44px);">
+            Drop a deck<br/><em>to get started.</em>
+          </h2>
+          <p class="mx-auto mt-4 max-w-[42ch] text-[14.5px] text-ink2">
+            Click <span class="font-medium text-ink">Upload presentation</span> in the top right and pick a .pptx — it's parsed locally, then opened in the workspace.
+          </p>
+          <button id="empty-upload-btn" type="button" class="btn-primary mt-7" style="width:auto;display:inline-flex;">
+            Upload presentation
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
       {% endif %}
     </section>
 
-    <section id="upload-status" class="mt-6 hidden rounded-2xl border border-zentrol-gray-200 bg-white p-4">
-      <div class="flex items-center justify-between text-sm">
-        <span id="upload-progress-label" class="font-medium">Processing…</span>
-        <span id="upload-progress-pct" class="font-mono text-zentrol-teal-600">0%</span>
-      </div>
-      <div class="mt-2 h-2 overflow-hidden rounded-full bg-zentrol-gray-200">
-        <div id="upload-progress-bar" class="h-full w-0 rounded-full bg-zentrol-teal-500"></div>
-      </div>
-      <p id="upload-error-text" class="mt-2 hidden text-sm text-red-600"></p>
-    </section>
   </main>
 
+
+  <!-- Search modal -->
   <div id="search-modal" class="fixed inset-0 z-50 hidden">
-    <button id="search-backdrop" type="button" class="absolute inset-0 bg-zentrol-navy-900/45" aria-label="Close search"></button>
-    <div class="relative mx-auto mt-14 w-[min(92vw,760px)] overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white shadow-2xl">
-      <div class="border-b border-zentrol-gray-200 px-5 py-4">
+    <button id="search-backdrop" type="button" class="absolute inset-0" style="background: rgba(27,26,24,0.40);" aria-label="Close search"></button>
+    <div class="surface relative mx-auto mt-16 w-[min(92vw,720px)] overflow-hidden">
+      <div class="border-b border-line px-5 py-4">
         <label for="search-input" class="sr-only">Jump to</label>
-        <div class="flex items-center gap-3 text-zentrol-gray-400">
-          <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="magnifying-glass" class="h-4 w-4" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M368 208A160 160 0 1 0 48 208a160 160 0 1 0 320 0zM337.1 371.1C301.7 399.2 256.8 416 208 416C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208c0 48.8-16.8 93.7-44.9 129.1L505 471c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L337.1 371.1z"></path></svg>
-          <input id="search-input" type="text" placeholder="Jump to" class="w-full border-0 bg-transparent p-0 text-sm text-zentrol-navy-500 placeholder:text-zentrol-gray-400 focus:outline-none">
+        <div class="flex items-center gap-3 text-mute">
+          <svg aria-hidden="true" focusable="false" class="h-4 w-4" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M368 208A160 160 0 1 0 48 208a160 160 0 1 0 320 0zM337.1 371.1C301.7 399.2 256.8 416 208 416C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208c0 48.8-16.8 93.7-44.9 129.1L505 471c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0L337.1 371.1z"></path></svg>
+          <input id="search-input" type="text" placeholder="Jump to a deck or section…" class="w-full border-0 bg-transparent p-0 text-[14px] text-ink placeholder:text-mute focus:outline-none" autocomplete="off" spellcheck="false">
+          <span id="search-status" class="hidden font-mono text-[11px] uppercase tracking-[0.16em] text-mute">searching…</span>
         </div>
       </div>
-      <div class="max-h-[52vh] overflow-y-auto px-5 py-4">
-        <div class="space-y-3">
+      <div class="max-h-[52vh] overflow-y-auto px-3 py-3">
+        {# Default "recent decks" panel — visible while the input is empty. #}
+        <div id="search-recent" class="space-y-1">
+          {% if assets %}
+            <p class="px-2 pb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-mute">recent</p>
+          {% endif %}
           {% for asset in assets|slice:":6" %}
-            <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-zentrol-gray-50">
+            <a href="{% url 'presentation' %}?asset={{ asset.id }}" class="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-paperDeep/60">
               {% with first=asset.slides_json.0 %}
                 {% if first.imageUrl %}
                   <img src="{{ first.imageUrl }}" alt="" class="h-12 w-24 rounded-md object-cover">
                 {% else %}
-                  <div class="grid h-12 w-24 place-items-center rounded-md bg-zentrol-gray-100 text-xs text-zentrol-gray-500">No preview</div>
+                  <div class="grid h-12 w-24 place-items-center rounded-md bg-paperDeep text-[10px] text-mute">no preview</div>
                 {% endif %}
               {% endwith %}
               <div>
-                <p class="text-sm font-medium text-zentrol-navy-500">{{ asset.title }}</p>
-                <p class="text-xs text-zentrol-gray-500">{{ asset.slide_count }} slides</p>
-                <p class="mt-1 text-xs text-zentrol-gray-400">Edited {{ asset.updated_at|date:"M j, H:i" }}</p>
+                <p class="text-[13.5px] font-medium text-ink">{{ asset.title }}</p>
+                <p class="text-[11.5px] text-mute tnum">{{ asset.slide_count }} slides</p>
+                <p class="mt-0.5 text-[11px] text-mute">edited {{ asset.updated_at|date:"M j, H:i" }}</p>
               </div>
             </a>
           {% empty %}
-            <p class="px-2 py-1 text-sm text-zentrol-gray-500">No saved presentations yet.</p>
+            <p class="px-2 py-2 text-sm text-mute">No saved presentations yet.</p>
           {% endfor %}
         </div>
+        {# Live Algolia results — populated by JS, hidden until the user types. #}
+        <div id="search-results" class="hidden space-y-1"></div>
+        <div id="search-empty" class="hidden px-2 py-6 text-center">
+          <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-mute">no matches</p>
+          <p class="mt-2 text-sm text-ink">Try a different word — we look across deck titles, file names, and slide text.</p>
+        </div>
+        <div id="search-error" class="hidden px-2 py-6 text-center">
+          <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-mute">offline</p>
+          <p class="mt-2 text-sm text-ink">Search is briefly unavailable. Try again in a moment.</p>
+        </div>
       </div>
-      <div class="flex items-center justify-between border-t border-zentrol-gray-200 px-5 py-3 text-xs text-zentrol-gray-500">
-        <p>Tip: Press <span class="rounded border border-zentrol-gray-300 bg-zentrol-gray-50 px-1.5 py-0.5">⌘K</span> to open search.</p>
-        <button id="search-close" type="button" class="rounded-md px-2 py-1 hover:bg-zentrol-gray-100">✕</button>
+      <div class="flex items-center justify-between gap-4 border-t border-line px-5 py-3 text-[12px] text-mute">
+        <p class="flex items-center gap-2">
+          <span>Tip · press <span class="rounded border border-line bg-paper px-1.5 py-0.5 font-mono">⌘K</span> to open search</span>
+          {% if algolia %}
+            <span class="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.16em] text-mute" title="Powered by Algolia">
+              <span class="h-1.5 w-1.5 rounded-full bg-accent"></span>
+              algolia
+            </span>
+          {% endif %}
+        </p>
+        <button id="search-close" type="button" class="icon-btn !h-7 !w-7">✕</button>
       </div>
     </div>
   </div>
 
+  {% if algolia %}
+    {{ algolia|json_script:"algolia-config" }}
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.24.0/dist/algoliasearch-lite.umd.js" crossorigin="anonymous" defer></script>
+  {% endif %}
+
+  <!-- Delete modal -->
   <div id="delete-modal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
-    <button id="delete-backdrop" type="button" class="absolute inset-0 bg-zentrol-navy-900/45" aria-label="Close delete dialog"></button>
-    <div class="relative mx-auto mt-24 w-[min(92vw,460px)] overflow-hidden rounded-2xl border border-zentrol-gray-200 bg-white shadow-2xl">
-      <div class="border-b border-zentrol-gray-200 px-5 py-4">
-        <h3 class="text-base font-semibold text-zentrol-navy-500">Delete presentation?</h3>
+    <button id="delete-backdrop" type="button" class="absolute inset-0" style="background: rgba(27,26,24,0.40);" aria-label="Close delete dialog"></button>
+    <div class="surface relative mx-auto mt-24 w-[min(92vw,460px)] overflow-hidden">
+      <div class="border-b border-line px-5 py-4">
+        <p class="num">— action</p>
+        <h3 class="mt-1 text-base font-semibold text-ink">Delete presentation?</h3>
       </div>
       <div class="px-5 py-4">
-        <p id="delete-message" class="text-sm text-zentrol-gray-600">This action cannot be undone.</p>
+        <p id="delete-message" class="text-sm text-ink2">This action cannot be undone.</p>
       </div>
-      <div class="flex items-center justify-end gap-2 border-t border-zentrol-gray-200 px-5 py-3">
-        <button id="delete-cancel" type="button" class="rounded-lg border border-zentrol-gray-200 px-3 py-1.5 text-sm hover:bg-zentrol-gray-50">Cancel</button>
-        <button id="delete-confirm" type="button" class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700">Delete</button>
+      <div class="flex items-center justify-end gap-2 border-t border-line px-5 py-3">
+        <button id="delete-cancel" type="button" class="btn-ghost">Cancel</button>
+        <button id="delete-confirm" type="button" class="btn-primary !bg-red-600 !border-red-600 hover:!bg-red-700">Delete</button>
       </div>
     </div>
   </div>
 
   <input id="file-input" type="file" accept=".pptx,.ppt" class="hidden" />
 
+  <div id="dash-toast" class="pointer-events-none fixed bottom-6 left-1/2 z-[60] hidden max-w-[min(92vw,22rem)] -translate-x-1/2" role="status" aria-live="polite">
+    <div id="dash-toast-inner" class="surface px-4 py-3 text-center text-sm font-medium leading-snug text-ink shadow-[0_8px_32px_-12px_rgba(27,26,24,0.35)]">
+      <span id="dash-toast-text"></span>
+    </div>
+  </div>
+
   <script>
     const fileInput = document.getElementById('file-input');
     const uploadBtn = document.getElementById('upload-btn');
+    const emptyUploadBtn = document.getElementById('empty-upload-btn');
     const createNewBtn = document.getElementById('create-new-btn');
     const statusWrap = document.getElementById('upload-status');
     const labelEl = document.getElementById('upload-progress-label');
     const pctEl = document.getElementById('upload-progress-pct');
     const barEl = document.getElementById('upload-progress-bar');
     const errorEl = document.getElementById('upload-error-text');
+    const dashToast = document.getElementById('dash-toast');
+    const dashToastInner = document.getElementById('dash-toast-inner');
+    const dashToastText = document.getElementById('dash-toast-text');
     const searchBtn = document.getElementById('search-btn');
     const searchModal = document.getElementById('search-modal');
     const searchInput = document.getElementById('search-input');
@@ -775,6 +1071,21 @@
     const deleteMessage = document.getElementById('delete-message');
     const activeFilter = "{{ active_filter|default:'all' }}";
     let pendingDeleteUrl = '';
+
+    let dashToastTimer = null;
+    function showDashboardToast(message, opts = {}) {
+      const error = !!opts.error;
+      const ms = typeof opts.duration === 'number' ? opts.duration : error ? 4500 : 2600;
+      if (!dashToast || !dashToastInner || !dashToastText) return;
+      if (dashToastTimer) clearTimeout(dashToastTimer);
+      dashToastText.textContent = message;
+      dashToastInner.classList.toggle('is-error', error);
+      dashToast.classList.remove('hidden');
+      dashToastTimer = setTimeout(() => {
+        dashToast.classList.add('hidden');
+        dashToastTimer = null;
+      }, ms);
+    }
 
     function getCSRFToken() {
       const name = 'csrftoken=';
@@ -790,20 +1101,202 @@
     }
 
     if (uploadBtn) uploadBtn.addEventListener('click', openFilePicker);
+    if (emptyUploadBtn) emptyUploadBtn.addEventListener('click', openFilePicker);
     if (createNewBtn) createNewBtn.addEventListener('click', openFilePicker);
     document.querySelectorAll('[data-upload-again]').forEach((btn) => btn.addEventListener('click', openFilePicker));
 
     function openSearch() {
       if (!searchModal) return;
+      // Reset the modal to its empty "recent decks" state on every open so
+      // a previous query never lingers across open/close. No-op when the
+      // Algolia panels aren't on the page (search degrades to static).
+      if (searchInput) searchInput.value = '';
+      const _resultsEl = document.getElementById('search-results');
+      const _recentEl = document.getElementById('search-recent');
+      const _emptyEl = document.getElementById('search-empty');
+      const _errorEl = document.getElementById('search-error');
+      const _statusEl = document.getElementById('search-status');
+      if (_resultsEl) { _resultsEl.innerHTML = ''; _resultsEl.classList.add('hidden'); }
+      if (_emptyEl) _emptyEl.classList.add('hidden');
+      if (_errorEl) _errorEl.classList.add('hidden');
+      if (_recentEl) _recentEl.classList.remove('hidden');
+      if (_statusEl) _statusEl.classList.add('hidden');
+
       searchModal.classList.remove('hidden');
       setTimeout(() => searchInput && searchInput.focus(), 0);
     }
-
     function closeSearch() {
       if (!searchModal) return;
       searchModal.classList.add('hidden');
     }
 
+    // ── Algolia live search ──────────────────────────────────────────────────
+    // Backend (gestures/views.py::dashboard_view) only emits #algolia-config
+    // when ALGOLIA_APP_ID + ALGOLIA_ADMIN_API_KEY are set AND it successfully
+    // minted a per-user secured search key. When that JSON node is absent,
+    // we leave the modal in its server-rendered "recent decks" state and skip
+    // wiring anything — the search input then degrades to a no-op cosmetic
+    // field, which matches the original pre-Algolia behaviour.
+    (function setupAlgoliaSearch() {
+      const cfgEl = document.getElementById('algolia-config');
+      if (!cfgEl || !searchInput) return;
+
+      let cfg;
+      try { cfg = JSON.parse(cfgEl.textContent || '{}'); }
+      catch (_) { return; }
+      if (!cfg.app_id || !cfg.search_key || !cfg.index_name) return;
+
+      const recentEl = document.getElementById('search-recent');
+      const resultsEl = document.getElementById('search-results');
+      const emptyEl = document.getElementById('search-empty');
+      const errorEl = document.getElementById('search-error');
+      const statusEl = document.getElementById('search-status');
+      const presentationBaseUrl = "{% url 'presentation' %}";
+
+      let index = null;
+      let inflightSeq = 0;
+      let debounceTimer = null;
+
+      function showOnly(visible) {
+        // Visible may be: 'recent' | 'results' | 'empty' | 'error' | null.
+        for (const [name, node] of Object.entries({ recent: recentEl, results: resultsEl, empty: emptyEl, error: errorEl })) {
+          if (!node) continue;
+          if (name === visible) node.classList.remove('hidden');
+          else node.classList.add('hidden');
+        }
+      }
+
+      function escapeHTML(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      // Algolia returns highlight markup as ``<mark>matched</mark>`` inside
+      // ``_highlightResult`` / ``_snippetResult``. We HTML-escape every text
+      // segment around those tags ourselves so user-supplied filenames can
+      // never inject markup (even though the secured key already restricts
+      // results to the current user's own data).
+      function safeHighlight(value) {
+        if (!value) return '';
+        const escaped = escapeHTML(value)
+          .replace(/&lt;mark&gt;/g, '<mark>')
+          .replace(/&lt;\/mark&gt;/g, '</mark>');
+        return escaped;
+      }
+
+      function formatEdited(ts) {
+        if (!ts) return '';
+        try {
+          const d = new Date(Number(ts) * 1000);
+          if (isNaN(d.getTime())) return '';
+          const fmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          return 'edited ' + fmt.format(d);
+        } catch (_) { return ''; }
+      }
+
+      function renderHits(hits) {
+        if (!resultsEl) return;
+        const items = hits.map((hit) => {
+          const hl = hit._highlightResult || {};
+          const titleHTML = safeHighlight((hl.title && hl.title.value) || hit.title || 'Untitled');
+          const fileHL = (hl.source_filename && hl.source_filename.value) || hit.source_filename || '';
+          const snippet = (hit._snippetResult && hit._snippetResult.body && hit._snippetResult.body.value) || '';
+          const slideCount = Number(hit.slide_count || 0);
+          const thumb = hit.thumbnail_url
+            ? `<img src="${escapeHTML(hit.thumbnail_url)}" alt="" class="h-12 w-24 rounded-md object-cover" loading="lazy">`
+            : `<div class="grid h-12 w-24 place-items-center rounded-md bg-paperDeep text-[10px] text-mute">no preview</div>`;
+          const meta = [
+            slideCount ? `${slideCount} slides` : '',
+            formatEdited(hit.updated_at_ts),
+          ].filter(Boolean).join(' · ');
+          const url = `${presentationBaseUrl}?asset=${encodeURIComponent(hit.objectID)}`;
+          const fileLine = fileHL && fileHL !== titleHTML
+            ? `<p class="mt-0.5 truncate text-[11px] text-mute">${safeHighlight(fileHL)}</p>` : '';
+          const snippetLine = snippet
+            ? `<p class="mt-1 line-clamp-2 text-[11.5px] text-mute">${safeHighlight(snippet)}</p>` : '';
+          return `
+            <a href="${url}" class="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-paperDeep/60">
+              ${thumb}
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-[13.5px] font-medium text-ink">${titleHTML}</p>
+                ${meta ? `<p class="text-[11.5px] text-mute tnum">${escapeHTML(meta)}</p>` : ''}
+                ${fileLine}
+                ${snippetLine}
+              </div>
+            </a>`;
+        }).join('');
+        resultsEl.innerHTML = items;
+      }
+
+      async function ensureIndex() {
+        if (index) return index;
+        if (typeof window.algoliasearch !== 'function') return null;
+        const client = window.algoliasearch(cfg.app_id, cfg.search_key);
+        index = client.initIndex(cfg.index_name);
+        return index;
+      }
+
+      async function runSearch(rawQuery) {
+        const query = (rawQuery || '').trim();
+        if (!query) {
+          showOnly('recent');
+          if (statusEl) statusEl.classList.add('hidden');
+          return;
+        }
+
+        const seq = ++inflightSeq;
+        if (statusEl) statusEl.classList.remove('hidden');
+
+        try {
+          const idx = await ensureIndex();
+          if (!idx) throw new Error('algolia client unavailable');
+          const { hits = [] } = await idx.search(query, {
+            hitsPerPage: 8,
+            attributesToRetrieve: [
+              'objectID', 'title', 'source_filename', 'slide_count',
+              'thumbnail_url', 'updated_at_ts', 'is_favorite',
+            ],
+            attributesToHighlight: ['title', 'source_filename'],
+            attributesToSnippet: ['body:18'],
+            highlightPreTag: '<mark>',
+            highlightPostTag: '</mark>',
+          });
+          // Drop stale responses if the user kept typing.
+          if (seq !== inflightSeq) return;
+          if (!hits.length) {
+            if (resultsEl) resultsEl.innerHTML = '';
+            showOnly('empty');
+          } else {
+            renderHits(hits);
+            showOnly('results');
+          }
+        } catch (err) {
+          if (seq !== inflightSeq) return;
+          console.warn('Algolia search failed', err);
+          showOnly('error');
+        } finally {
+          if (seq === inflightSeq && statusEl) statusEl.classList.add('hidden');
+        }
+      }
+
+      searchInput.addEventListener('input', (e) => {
+        const value = e.target.value || '';
+        if (debounceTimer) clearTimeout(debounceTimer);
+        // 120ms is short enough to feel instant but long enough to skip
+        // typing-storm requests on slow networks.
+        debounceTimer = setTimeout(() => runSearch(value), 120);
+      });
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const firstHit = resultsEl && resultsEl.querySelector('a[href]');
+        if (firstHit) {
+          e.preventDefault();
+          window.location.href = firstHit.getAttribute('href');
+        }
+      });
+    })();
     function openDeleteModal(url, title) {
       pendingDeleteUrl = url || '';
       if (deleteMessage) {
@@ -815,7 +1308,6 @@
         deleteModal.setAttribute('aria-hidden', 'false');
       }
     }
-
     function closeDeleteModal() {
       pendingDeleteUrl = '';
       if (deleteModal) {
@@ -856,7 +1348,6 @@
     function closeAllCardMenus() {
       document.querySelectorAll('[data-card-menu]').forEach((menu) => menu.classList.add('hidden'));
     }
-
     document.querySelectorAll('[data-card-menu-btn]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -867,7 +1358,6 @@
         if (opening) menu.classList.remove('hidden');
       });
     });
-
     document.addEventListener('click', (e) => {
       if (!e.target.closest('[data-card-menu]') && !e.target.closest('[data-card-menu-btn]')) {
         closeAllCardMenus();
@@ -881,16 +1371,9 @@
         const fullUrl = `${window.location.origin}${relUrl}`;
         try {
           await navigator.clipboard.writeText(fullUrl);
-          statusWrap.classList.remove('hidden');
-          errorEl.classList.add('hidden');
-          labelEl.textContent = 'Link copied';
-          pctEl.textContent = '';
-          barEl.style.width = '0%';
+          showDashboardToast('Link copied');
         } catch (_) {
-          statusWrap.classList.remove('hidden');
-          labelEl.textContent = 'Copy failed';
-          errorEl.textContent = '⚠️ Could not copy link.';
-          errorEl.classList.remove('hidden');
+          showDashboardToast('Could not copy link.', { error: true });
         }
         closeAllCardMenus();
       });
@@ -902,16 +1385,9 @@
       if (!url) return;
       btn.disabled = true;
       try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': getCSRFToken()
-          }
-        });
+        const response = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': getCSRFToken() } });
         const result = await response.json();
-        if (!response.ok || !result.ok) {
-          throw new Error(result.error || 'Failed to update favorite');
-        }
+        if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to update favorite');
         const isFav = !!result.is_favorite;
         document.querySelectorAll(`[data-fav-btn][data-asset-id="${assetId}"]`).forEach((el) => {
           el.dataset.isFavorite = isFav ? '1' : '0';
@@ -923,15 +1399,9 @@
             el.textContent = isFav ? 'Remove from favorites' : 'Add to favorites';
           }
         });
-
-        if (activeFilter === 'favorites' && !isFav) {
-          window.location.reload();
-        }
+        if (activeFilter === 'favorites' && !isFav) window.location.reload();
       } catch (err) {
-        statusWrap.classList.remove('hidden');
-        labelEl.textContent = 'Favorite update failed';
-        errorEl.textContent = `⚠️ ${err.message}`;
-        errorEl.classList.remove('hidden');
+        showDashboardToast(err.message || 'Favorite update failed', { error: true });
       } finally {
         btn.disabled = false;
       }
@@ -950,26 +1420,14 @@
         if (!pendingDeleteUrl) return;
         deleteConfirm.disabled = true;
         const originalText = deleteConfirm.textContent;
-        deleteConfirm.textContent = 'Deleting...';
+        deleteConfirm.textContent = 'Deleting…';
         try {
-          const response = await fetch(pendingDeleteUrl, {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': getCSRFToken()
-            }
-          });
+          const response = await fetch(pendingDeleteUrl, { method: 'POST', headers: { 'X-CSRFToken': getCSRFToken() } });
           const result = await response.json();
-          if (!response.ok || !result.ok) {
-            throw new Error(result.error || 'Failed to delete presentation');
-          }
+          if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to delete presentation');
           window.location.reload();
         } catch (err) {
-          if (errorEl) {
-            statusWrap.classList.remove('hidden');
-            labelEl.textContent = 'Delete failed';
-            errorEl.textContent = `⚠️ ${err.message}`;
-            errorEl.classList.remove('hidden');
-          }
+          showDashboardToast(err.message || 'Delete failed', { error: true });
           closeDeleteModal();
         } finally {
           deleteConfirm.disabled = false;
@@ -984,12 +1442,8 @@
         if (searchModal && searchModal.classList.contains('hidden')) openSearch();
         else closeSearch();
       }
-      if (e.key === 'Escape' && searchModal && !searchModal.classList.contains('hidden')) {
-        closeSearch();
-      }
-      if (e.key === 'Escape' && deleteModal && !deleteModal.classList.contains('hidden')) {
-        closeDeleteModal();
-      }
+      if (e.key === 'Escape' && searchModal && !searchModal.classList.contains('hidden')) closeSearch();
+      if (e.key === 'Escape' && deleteModal && !deleteModal.classList.contains('hidden')) closeDeleteModal();
     });
 
     fileInput.addEventListener('change', async (e) => {
@@ -997,6 +1451,7 @@
       if (!file) return;
 
       statusWrap.classList.remove('hidden');
+      statusWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       errorEl.classList.add('hidden');
       labelEl.textContent = 'Starting…';
       pctEl.textContent = '0%';
@@ -1012,9 +1467,7 @@
 
         const response = await fetch("{% url 'upload_presentation' %}", {
           method: 'POST',
-          headers: {
-            'X-CSRFToken': getCSRFToken()
-          },
+          headers: { 'X-CSRFToken': getCSRFToken() },
           body: formData
         });
 
@@ -1023,22 +1476,21 @@
         barEl.style.width = '90%';
 
         const result = await response.json();
-        if (!response.ok || !result.ok) {
-          throw new Error(result.error || 'Failed to save presentation');
-        }
+        if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to save presentation');
         labelEl.textContent = 'Completed';
         pctEl.textContent = '100%';
         barEl.style.width = '100%';
         window.location.href = "{% url 'dashboard' %}";
       } catch (err) {
         labelEl.textContent = 'Upload failed';
-        errorEl.textContent = `⚠️ ${err.message}`;
+        errorEl.textContent = err.message;
         errorEl.classList.remove('hidden');
       } finally {
         fileInput.value = '';
       }
     });
   </script>
+
   <script>
     (function () {
       const trigger = document.getElementById('account-menu-trigger');
@@ -1053,74 +1505,52 @@
         dropdown.classList.add('hidden');
         trigger.setAttribute('aria-expanded', 'false');
       }
-
       function openMenu() {
         if (!trigger || !dropdown) return;
         dropdown.classList.remove('hidden');
         trigger.setAttribute('aria-expanded', 'true');
       }
-
       function toggleMenu() {
         if (!dropdown) return;
         if (dropdown.classList.contains('hidden')) openMenu();
         else closeMenu();
       }
-
       function openAccountModal() {
         if (!modal) return;
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('overflow-hidden');
       }
-
       function closeAccountModal() {
         if (!modal) return;
         modal.classList.add('hidden');
         modal.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('overflow-hidden');
       }
-
       function isModalOpen() {
         return modal && !modal.classList.contains('hidden');
       }
 
       if (trigger && dropdown) {
-        trigger.addEventListener('click', function (e) {
-          e.stopPropagation();
-          toggleMenu();
-        });
-
-        dropdown.addEventListener('click', function (e) {
-          e.stopPropagation();
-        });
-
-        document.addEventListener('click', function () {
-          closeMenu();
-        });
+        trigger.addEventListener('click', function (e) { e.stopPropagation(); toggleMenu(); });
+        dropdown.addEventListener('click', function (e) { e.stopPropagation(); });
+        document.addEventListener('click', function () { closeMenu(); });
       }
-
       if (settingsOpen) {
-        settingsOpen.addEventListener('click', function (e) {
+        settingsOpen.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); closeMenu(); openAccountModal(); });
+      }
+      var railAccountSettings = document.getElementById('rail-account-settings');
+      if (railAccountSettings) {
+        railAccountSettings.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
           closeMenu();
           openAccountModal();
         });
       }
+      if (backdrop) backdrop.addEventListener('click', function () { closeAccountModal(); });
+      if (settingsClose) settingsClose.addEventListener('click', function () { closeAccountModal(); });
 
-      if (backdrop) {
-        backdrop.addEventListener('click', function () {
-          closeAccountModal();
-        });
-      }
-
-      if (settingsClose) {
-        settingsClose.addEventListener('click', function () {
-          closeAccountModal();
-        });
-      }
-
-      /* Tabs */
       const tabBtns = document.querySelectorAll('[data-account-tab]');
       const panels = document.querySelectorAll('[data-account-panel]');
       tabBtns.forEach(function (btn) {
@@ -1129,13 +1559,7 @@
           tabBtns.forEach(function (b) {
             const active = b.getAttribute('data-account-tab') === id;
             b.setAttribute('aria-selected', active ? 'true' : 'false');
-            if (active) {
-              b.classList.add('bg-sky-100', 'text-sky-900');
-              b.classList.remove('text-zentrol-navy-500');
-            } else {
-              b.classList.remove('bg-sky-100', 'text-sky-900');
-              b.classList.add('text-zentrol-navy-500', 'hover:bg-zentrol-gray-50');
-            }
+            b.classList.toggle('is-active', active);
           });
           panels.forEach(function (p) {
             const show = p.getAttribute('data-account-panel') === id;
@@ -1150,64 +1574,19 @@
       var deleteCancelBtn2 = document.getElementById('account-delete-cancel-2');
       var deleteBackdrop = document.getElementById('account-delete-backdrop');
 
-      function isDeleteModalOpen() {
-        return deleteModal && !deleteModal.classList.contains('hidden');
-      }
+      function isDeleteModalOpen() { return deleteModal && !deleteModal.classList.contains('hidden'); }
+      function openDeleteModal() { if (!deleteModal) return; deleteModal.classList.remove('hidden'); deleteModal.setAttribute('aria-hidden', 'false'); }
+      function closeDeleteModal() { if (!deleteModal) return; deleteModal.classList.add('hidden'); deleteModal.setAttribute('aria-hidden', 'true'); }
 
-      function openDeleteModal() {
-        if (!deleteModal) return;
-        deleteModal.classList.remove('hidden');
-        deleteModal.setAttribute('aria-hidden', 'false');
-      }
-
-      function closeDeleteModal() {
-        if (!deleteModal) return;
-        deleteModal.classList.add('hidden');
-        deleteModal.setAttribute('aria-hidden', 'true');
-      }
-
-      if (deleteOpenBtn) {
-        deleteOpenBtn.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          openDeleteModal();
-        });
-      }
-
-      if (deleteCancelBtn) {
-        deleteCancelBtn.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          closeDeleteModal();
-        });
-      }
-
-      if (deleteCancelBtn2) {
-        deleteCancelBtn2.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          closeDeleteModal();
-        });
-      }
-
-      if (deleteBackdrop) {
-        deleteBackdrop.addEventListener('click', function () {
-          closeDeleteModal();
-        });
-      }
+      if (deleteOpenBtn) deleteOpenBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openDeleteModal(); });
+      if (deleteCancelBtn) deleteCancelBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); closeDeleteModal(); });
+      if (deleteCancelBtn2) deleteCancelBtn2.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); closeDeleteModal(); });
+      if (deleteBackdrop) deleteBackdrop.addEventListener('click', function () { closeDeleteModal(); });
 
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
-        if (isDeleteModalOpen()) {
-          closeDeleteModal();
-          e.preventDefault();
-          return;
-        }
-        if (isModalOpen()) {
-          closeAccountModal();
-          e.preventDefault();
-          return;
-        }
+        if (isDeleteModalOpen()) { closeDeleteModal(); e.preventDefault(); return; }
+        if (isModalOpen()) { closeAccountModal(); e.preventDefault(); return; }
         closeMenu();
       });
 
@@ -1222,26 +1601,17 @@
       function computePreview() {
         const first = (firstNameEl && firstNameEl.value ? firstNameEl.value : '').trim();
         const last = (lastNameEl && lastNameEl.value ? lastNameEl.value : '').trim();
-
         let fullName = '';
-        if (first || last) {
-          fullName = `${first} ${last}`.trim();
-        }
-
+        if (first || last) fullName = `${first} ${last}`.trim();
         const display = fullName ? fullName : fallbackUsername;
-        if (displayNameEl) displayNameEl.textContent = display.toUpperCase();
+        if (displayNameEl) displayNameEl.textContent = display;
 
         if (avatarInitials) {
           let initials = '';
-          if (first && last) {
-            initials = `${first.slice(0, 1)}${last.slice(0, 1)}`;
-          } else if (first) {
-            initials = first.slice(0, 2);
-          } else if (last) {
-            initials = last.slice(0, 2);
-          } else {
-            initials = (fallbackUsername || '').slice(0, 2);
-          }
+          if (first && last) initials = `${first.slice(0, 1)}${last.slice(0, 1)}`;
+          else if (first) initials = first.slice(0, 2);
+          else if (last) initials = last.slice(0, 2);
+          else initials = (fallbackUsername || '').slice(0, 2);
           avatarInitials.textContent = (initials || '').toUpperCase();
         }
       }
@@ -1260,7 +1630,6 @@
           avatarInitials.classList.add('hidden');
         });
       }
-
       computePreview();
     })();
   </script>

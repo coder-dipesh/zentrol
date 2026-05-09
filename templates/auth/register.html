@@ -1,30 +1,50 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Register | Zentrol</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
-  <main class="mx-auto flex min-h-screen max-w-md items-center px-4">
-    <section class="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 class="text-2xl font-semibold">Create account</h1>
-      <p class="mt-1 text-sm text-slate-500">Use Zentrol dashboard and saved presentations.</p>
-      <form method="post" class="mt-6 space-y-4">
-        {% csrf_token %}
-        {% for field in form %}
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            <div class="[&>input]:w-full [&>input]:rounded-lg [&>input]:border [&>input]:border-slate-300 [&>input]:px-3 [&>input]:py-2 [&>input]:text-sm [&>input]:focus:outline-none [&>input]:focus:ring-2 [&>input]:focus:ring-teal-200">{{ field }}</div>
-            {% if field.errors %}<p class="mt-1 text-xs text-red-600">{{ field.errors|striptags }}</p>{% endif %}
-          </div>
-        {% endfor %}
-        <button type="submit" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700">Create account</button>
-      </form>
-      <p class="mt-4 text-sm text-slate-600">Already have an account? <a href="{% url 'login' %}" class="font-medium text-teal-700">Login</a></p>
-    </section>
-  </main>
-</body>
-</html>
+{% extends "_auth_base.html" %}
+
+{% block auth_body_class %}auth-viewport-lock{% endblock %}
+
+{% block title %}Create account | Zentrol{% endblock %}
+
+{% block form_card %}
+  <div class="auth-register-compact">
+    <span class="eyebrow reveal-up">— 01 / new account</span>
+    <h1 class="display reveal-up d2 mt-3 lg:mt-2">
+      Create<br/><em>your account.</em>
+    </h1>
+    <p class="reveal-up d3 mt-3 max-w-[40ch] text-[13px] leading-snug text-ink2 lg:mt-2">
+      A workspace, a deck library, and one URL to present from anywhere.
+    </p>
+
+    <form method="post" class="reveal-up d3 mt-5 space-y-3 lg:mt-4">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="rounded-xl border border-red-200 bg-red-50/70 px-3 py-2 text-xs leading-snug text-red-700">
+          {{ form.non_field_errors|striptags }}
+        </div>
+      {% endif %}
+      {% for field in form %}
+        <div>
+          <label for="{{ field.id_for_label }}" class="mb-2 block text-[12px] font-medium leading-none text-ink2">
+            {{ field.label }}
+          </label>
+          <div class="auth-input">{{ field }}</div>
+          {% if field.help_text %}
+            <p class="mt-1 text-[11px] leading-snug text-mute">{{ field.help_text|safe }}</p>
+          {% endif %}
+          {% if field.errors %}
+            <p class="mt-1 text-[11px] leading-snug text-red-600">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <button type="submit" class="btn-primary reveal-up d4">
+        Create account
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+
+    <div class="reveal-up d4 mt-5 flex flex-wrap items-center gap-2 text-[13px] text-ink2 lg:mt-4">
+      <span>Already have an account?</span>
+      <a href="{% url 'login' %}" class="inline-link">Sign in</a>
+    </div>
+  </div>
+{% endblock %}

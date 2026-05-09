@@ -5,6 +5,8 @@ Compatible with PyLTI1p3 >= 2.0 where ToolConfDict takes a single settings
 dict and private keys are set via set_private_key().
 """
 
+from __future__ import annotations
+
 import logging
 
 from pylti1p3.tool_config import ToolConfDict
