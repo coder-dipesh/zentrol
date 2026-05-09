@@ -142,9 +142,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# Database
-# In serverless environments (like Vercel), use /tmp directory which is writable
-# Note: /tmp is ephemeral - data may be cleared between invocations
+
 def is_serverless_environment():
     """Detect if we're running in a serverless/read-only filesystem environment."""
     # Check environment variables first (fastest check)
@@ -163,21 +161,31 @@ def is_serverless_environment():
 
 IS_SERVERLESS = is_serverless_environment()
 
-# Configure database path based on environment
+# Database
+# Serverless (Vercel, Lambda): require PostgreSQL — SQLite on /tmp is ephemeral and
+# breaks auth/LTI after cold starts; migrations are applied at deploy time (see vercel.json).
 if IS_SERVERLESS:
-    # In serverless, use /tmp directory which is writable
-    # Note: /tmp is ephemeral - data persists only during the function execution
-    db_path = '/tmp/db.sqlite3'
+    _database_url = (os.environ.get('DATABASE_URL') or '').strip()
+    if not _database_url:
+        raise ImproperlyConfigured(
+            'DATABASE_URL must be set for serverless deployments (e.g. VERCEL=1). '
+            'Use managed PostgreSQL (Neon, Supabase, Vercel Postgres, etc.). SQLite is not '
+            'supported on serverless because the filesystem is not durable across instances.'
+        )
+    if _database_url.lower().startswith('sqlite:'):
+        raise ImproperlyConfigured(
+            'DATABASE_URL must not use SQLite on serverless — use PostgreSQL. '
+            'See docs/DEPLOYMENT.md (Vercel).'
+        )
+    DATABASES = {'default': env.db_url_config(_database_url)}
 else:
-    # In local development, use project directory
     db_path = str(BASE_DIR / 'db.sqlite3')
-
-DATABASES = {
-    'default': env.db(
-        'DATABASE_URL',
-        default=f'sqlite:///{db_path}'
-    )
-}
+    DATABASES = {
+        'default': env.db(
+            'DATABASE_URL',
+            default=f'sqlite:///{db_path}',
+        )
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

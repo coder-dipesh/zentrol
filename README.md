@@ -112,7 +112,7 @@ See [.env.example](.env.example) for all tunables.
 - **`vercel.json`** runs **`pip install -r requirements-vercel.txt`** — no PyTorch/Lip2Speech stack (keeps the bundle under the platform limit).
 - **`VERCEL=1`** is set by Vercel; **`LIP2SPEECH_ENABLED`** defaults to **`False`** so the `lip2speech` app and routes are omitted (see [`config/settings.py`](config/settings.py)).
 - **`.vercelignore`** excludes the `lip2speech/` source tree from the upload (large ML code + optional weights paths).
-- Use **managed Postgres** (`DATABASE_URL`). SQLite on `/tmp` is ephemeral and not suitable for production data.
+- **PostgreSQL `DATABASE_URL` is required** (SQLite is rejected on serverless). Build runs **`migrate`** and **`createcachetable`** — configure DB + **`SECRET_KEY`** in Vercel so builds succeed.
 - **Server-side `.pptx`** conversion needs LibreOffice — still unavailable on Vercel; use client-side deck flows or an external worker.
 
 ---
