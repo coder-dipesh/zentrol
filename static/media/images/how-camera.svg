@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="Zentrol illustration">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E6FAF8"/>
+      <stop offset="1" stop-color="#E6EBF0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  
+  <rect x="0" y="0" width="900" height="600" rx="32" fill="url(#bgGrad)"/>
+  <circle cx="780" cy="110" r="90" fill="#1FB6AA" opacity="0.12"/>
+  <circle cx="130" cy="520" r="110" fill="#0F1E2E" opacity="0.10"/>
+  
+  <g transform="translate(100,210) scale(1.0)">
+    <circle cx="170" cy="70" r="44" fill="#F7C7B2"/>
+    <path d="M135 55 C150 30, 190 25, 210 52 C215 68, 210 80, 205 88" fill="#0B1622"/>
+    <circle cx="154" cy="72" r="6" fill="#2b2b2b"/>
+    <circle cx="186" cy="72" r="6" fill="#2b2b2b"/>
+    <path d="M158 90 C170 102, 182 102, 194 90" fill="none" stroke="#C06B5A" stroke-width="6" stroke-linecap="round"/>
+    <rect x="118" y="115" width="110" height="120" rx="24" fill="#1AA096"/>
+    <rect x="126" y="230" width="44" height="120" rx="18" fill="#4B6790"/>
+    <rect x="176" y="230" width="44" height="120" rx="18" fill="#4B6790"/>
+    <rect x="120" y="340" width="52" height="18" rx="9" fill="#0F1E2E"/>
+    <rect x="174" y="340" width="52" height="18" rx="9" fill="#0F1E2E"/>
+    
+      <path d="M145 170 C130 220, 140 255, 165 285" fill="none" stroke="#1AA096" stroke-width="20" stroke-linecap="round"/>
+      <path d="M205 170 C220 220, 215 255, 195 285" fill="none" stroke="#1AA096" stroke-width="20" stroke-linecap="round"/>
+      <circle cx="165" cy="285" r="14" fill="#F2B7A0"/>
+      <circle cx="195" cy="285" r="14" fill="#F2B7A0"/>
+    
+  </g>
+
+  <g transform="translate(460,150)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="380" height="300" rx="24" fill="#ffffff" opacity="0.96"/>
+    <g transform="translate(40,50)">
+      <rect x="0" y="0" width="300" height="190" rx="18" fill="#0F1E2E"/>
+      <rect x="14" y="14" width="272" height="144" rx="12" fill="#F4F6F8"/>
+      <rect x="0" y="182" width="300" height="34" rx="16" fill="#0F1E2E"/>
+      <circle cx="150" cy="86" r="30" fill="#1FB6AA" opacity="0.65"/>
+      <rect x="116" y="70" width="68" height="34" rx="17" fill="#fff" opacity="0.95"/>
+      <text x="134" y="92" font-family="Inter, system-ui, Arial" font-size="16" fill="#374151" font-weight="800">Allow</text>
+    </g>
+    <g transform="translate(40,255)">
+      <rect x="0" y="0" width="220" height="16" rx="8" fill="#E5E7EB"/>
+      <rect x="0" y="24" width="160" height="14" rx="7" fill="#E5E7EB"/>
+      <rect x="250" y="-2" width="90" height="40" rx="20" fill="#1FB6AA"/>
+      <circle cx="278" cy="18" r="12" fill="#fff" opacity="0.95"/>
+    </g>
+  </g>
+
+</svg>

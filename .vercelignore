@@ -10,5 +10,6 @@ build.sh
 .git/
 .pytest_cache/
 htmlcov/
-media/
+# Same rule as .gitignore: anchor so ``static/media/`` ships with the bundle.
+/media/
 db.sqlite3

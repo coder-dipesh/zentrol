@@ -1,0 +1,32 @@
+<svg width="620" height="190" viewBox="0 0 620 190" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="620" height="190" fill="transparent"/>
+
+  <!-- Icon Circle -->
+  <circle cx="90" cy="90" r="52" fill="#0F1E2E"/>
+
+  <!-- Wave / Z Motion -->
+  <path
+    d="M40 65
+       C60 45, 100 45, 120 65
+       C100 80, 60 80, 40 95
+       C60 115, 100 115, 120 95"
+    fill="none"
+    stroke="#1FB6AA"
+    stroke-width="9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Brand Text -->
+  <text
+    x="150"
+    y="95"
+    font-family="Inter, Helvetica, Arial, sans-serif"
+    font-size="52"
+    font-weight="600"
+    fill="#ffffff"
+  >
+    Zentrol
+  </text>
+</svg>

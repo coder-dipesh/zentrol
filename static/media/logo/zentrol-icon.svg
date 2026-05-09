@@ -1,0 +1,15 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Zentrol">
+  <!-- Editorial: ink field + accent gesture stroke -->
+  <circle cx="64" cy="64" r="60" fill="#1B1A18"/>
+  <path
+    d="M32 52
+       C44 40, 84 40, 96 52
+       C84 64, 44 64, 32 76
+       C44 88, 84 88, 96 76"
+    fill="none"
+    stroke="#1F8D87"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
