@@ -4,7 +4,9 @@
 *.pyc
 __pycache__/
 db.sqlite3
-media/
+# Django user uploads only (repo-root MEDIA_ROOT). Do not use plain ``media/`` —
+# it ignores ``static/media/`` and breaks ``collectstatic`` / WhiteNoise manifest.
+/media/
 
 # Environment — never commit real secrets
 .env
@@ -41,3 +43,5 @@ staticfiles/
 
 # Misc archives / large artifacts (keep tracked docs undamaged)
 static/media.zip
+# Duplicate illustration tree (unused by templates; canonical paths are media/images/*.svg)
+static/media/images/zentrol_static/

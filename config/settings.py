@@ -328,8 +328,9 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=True)
     SECURE_CONTENT_TYPE_NOSNIFF = env.bool('SECURE_CONTENT_TYPE_NOSNIFF', default=True)
     SECURE_BROWSER_XSS_FILTER = env.bool('SECURE_BROWSER_XSS_FILTER', default=True)
-    # Omit X-Frame-Options so CSP frame-ancestors controls embedding (Moodle LTI).
-    X_FRAME_OPTIONS = None
+    # ALLOWALL keeps Django's XFrameOptionsMiddleware happy (None crashes .upper()).
+    # Embedding policy for Moodle is enforced via LTI_FRAME_ANCESTORS_CSP frame-ancestors.
+    X_FRAME_OPTIONS = 'ALLOWALL'
     _fa_parts = ["'self'"]
     for _raw in LTI_FRAME_ANCESTORS:
         _u = (_raw or '').strip().rstrip('/')

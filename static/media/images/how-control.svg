@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="Zentrol illustration">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E6FAF8"/>
+      <stop offset="1" stop-color="#E6EBF0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  
+  <rect x="0" y="0" width="900" height="600" rx="32" fill="url(#bgGrad)"/>
+  <circle cx="780" cy="110" r="90" fill="#1FB6AA" opacity="0.12"/>
+  <circle cx="130" cy="520" r="110" fill="#0F1E2E" opacity="0.10"/>
+  
+  <g transform="translate(100,210) scale(1.0)">
+    <circle cx="170" cy="70" r="44" fill="#F7C7B2"/>
+    <path d="M135 55 C150 30, 190 25, 210 52 C215 68, 210 80, 205 88" fill="#0B1622"/>
+    <circle cx="154" cy="72" r="6" fill="#2b2b2b"/>
+    <circle cx="186" cy="72" r="6" fill="#2b2b2b"/>
+    <path d="M158 90 C170 102, 182 102, 194 90" fill="none" stroke="#C06B5A" stroke-width="6" stroke-linecap="round"/>
+    <rect x="118" y="115" width="110" height="120" rx="24" fill="#1AA096"/>
+    <rect x="126" y="230" width="44" height="120" rx="18" fill="#4B6790"/>
+    <rect x="176" y="230" width="44" height="120" rx="18" fill="#4B6790"/>
+    <rect x="120" y="340" width="52" height="18" rx="9" fill="#0F1E2E"/>
+    <rect x="174" y="340" width="52" height="18" rx="9" fill="#0F1E2E"/>
+    
+      <path d="M165 150 C220 150, 255 155, 285 170" fill="none" stroke="#1AA096" stroke-width="22" stroke-linecap="round"/>
+      <circle cx="292" cy="173" r="16" fill="#F2B7A0"/>
+    
+  </g>
+
+  <g transform="translate(470,215) scale(1.0)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="320" height="210" rx="18" fill="#0F1E2E"/>
+    <rect x="14" y="14" width="292" height="164" rx="12" fill="#ffffff"/>
+    <rect x="0" y="202" width="320" height="34" rx="16" fill="#0F1E2E"/>
+    <rect x="120" y="210" width="80" height="10" rx="5" fill="#22364d"/>
+  </g>
+
+  <g transform="translate(520,110)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="300" height="78" rx="20" fill="#ffffff" opacity="0.96"/>
+    <text x="18" y="34" font-family="Inter, system-ui, Arial" font-size="16" fill="#374151" font-weight="700">Action</text>
+    <text x="18" y="60" font-family="Inter, system-ui, Arial" font-size="20" fill="#0F1E2E" font-weight="900">Next slide</text>
+    <rect x="206" y="22" width="76" height="34" rx="17" fill="#1FB6AA"/>
+    <text x="228" y="45" font-family="Inter, system-ui, Arial" font-size="14" fill="#fff" font-weight="900">Run</text>
+  </g>
+  <g transform="translate(520,455)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="320" height="92" rx="22" fill="#ffffff" opacity="0.96"/>
+    <text x="22" y="36" font-family="Inter, system-ui, Arial" font-size="18" fill="#374151" font-weight="700">Smooth control</text>
+    <rect x="22" y="54" width="276" height="12" rx="6" fill="#E5E7EB"/>
+    <rect x="22" y="54" width="210" height="12" rx="6" fill="#1FB6AA"/>
+  </g>
+
+</svg>

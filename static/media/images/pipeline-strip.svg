@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1400 380"
+     preserveAspectRatio="xMidYMid meet"
+     role="img"
+     aria-label="Pipeline: capture frames on-device, classify gestures with MediaPipe, advance slides">
+
+  <!--
+    Zentrol editorial theme — tokens match templates/home.html Tailwind extend:
+      paper #F4F1EA  paperDeep #EDE8DD  sand #FBF9F4
+      ink #1B1A18  ink2 #3C3A35  mute #86837C  line #D9D4C7
+      accent #1F8D87  accent2 #176A66  accentSoft #DCE9E7
+    Patterns: broken radius (4px TL, 28px elsewhere), hairline borders rgba(27,26,24,0.10),
+    teal-tinted shadow, mono eyebrows (~11px / 0.18em tracking).
+  -->
+
+  <defs>
+    <linearGradient id="stripBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1B1A18" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#1B1A18" stop-opacity="0.04"/>
+    </linearGradient>
+
+    <!-- Soft editorial shadow (matches .visual-frame teal + ink lift) -->
+    <filter id="panelShadow" x="-8%" y="-8%" width="116%" height="130%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24"
+                    flood-color="#1F8D87" flood-opacity="0.14"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="14"
+                    flood-color="#1B1A18" flood-opacity="0.10"/>
+    </filter>
+
+    <linearGradient id="connectorFade" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D9D4C7"/>
+      <stop offset="45%" stop-color="#1F8D87"/>
+      <stop offset="100%" stop-color="#D9D4C7"/>
+    </linearGradient>
+
+  </defs>
+
+  <!-- Strip backdrop (strip-frame) -->
+  <rect x="0" y="0" width="1400" height="380" fill="#F4F1EA"/>
+  <rect x="0" y="0" width="1400" height="380" fill="url(#stripBg)"/>
+  <rect x="0" y="0" width="1400" height="1" fill="#1B1A18" opacity="0.08"/>
+  <rect x="0" y="379" width="1400" height="1" fill="#1B1A18" opacity="0.08"/>
+
+  <!--
+    Pipeline artwork is grouped and shifted so the three-stage cluster is
+    centered on the 1400-wide canvas (bbox ~48–1378 → center 713 vs mid 700).
+  -->
+  <g transform="translate(-13, 0)">
+  <!-- Ambient accent blooms -->
+  <ellipse cx="1180" cy="72" rx="180" ry="100" fill="#1F8D87" opacity="0.06"/>
+  <ellipse cx="200" cy="310" rx="200" ry="90" fill="#1B1A18" opacity="0.03"/>
+
+  <!-- ========== STAGE 01 — Capture ========== -->
+  <g transform="translate(48, 52)" filter="url(#panelShadow)">
+    <!-- broken radius: 4 TL, 28 TR/BR/BL -->
+    <path fill="#FBF9F4" stroke="#1B1A18" stroke-opacity="0.10" stroke-width="1"
+          d="M 4 0 L 362 0 Q 386 0 386 24 L 386 252 Q 386 276 362 276 L 24 276 Q 0 276 0 252 L 0 4 Q 0 0 4 0 Z"/>
+
+    <!-- Eyebrow -->
+    <text x="28" y="36" fill="#86837C"
+          font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="500"
+          letter-spacing="3.2">CAPTURE</text>
+
+    <!-- Title + serif accent -->
+    <text x="28" y="72" fill="#1B1A18"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="22" font-weight="600"
+          letter-spacing="-0.6">Camera </text>
+    <text x="114" y="72" fill="#1B1A18"
+          font-family="'Instrument Serif', Georgia, serif" font-size="24" font-style="italic" font-weight="400"
+          letter-spacing="-0.3">frames</text>
+
+    <!-- Inner surface (paperDeep) -->
+    <rect x="24" y="92" width="338" height="132" rx="14" fill="#EDE8DD"
+          stroke="#1B1A18" stroke-opacity="0.06"/>
+
+    <!-- Minimal webcam glyph (stroke ink) -->
+    <rect x="148" y="122" width="92" height="72" rx="10" fill="none" stroke="#1B1A18" stroke-width="2" opacity="0.85"/>
+    <circle cx="194" cy="158" r="22" fill="none" stroke="#1F8D87" stroke-width="2"/>
+    <circle cx="194" cy="158" r="8" fill="#1F8D87" opacity="0.35"/>
+    <rect x="178" y="108" width="32" height="10" rx="3" fill="#1B1A18" opacity="0.75"/>
+
+    <!-- Spec row -->
+    <rect x="28" y="238" width="108" height="28" rx="14" fill="#DCE9E7"/>
+    <circle cx="46" cy="252" r="5" fill="#1F8D87"/>
+    <text x="58" y="257" fill="#176A66"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="12" font-weight="600">On-device</text>
+    <text x="158" y="257" fill="#86837C"
+          font-family="'JetBrains Mono', ui-monospace, monospace" font-size="10" font-weight="500"
+          letter-spacing="1.2">NO UPLOAD</text>
+  </g>
+
+  <!-- Connector 1 -->
+  <g transform="translate(434, 174)">
+    <line x1="0" y1="0" x2="76" y2="0" stroke="url(#connectorFade)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="88" cy="0" r="10" fill="#1F8D87"/>
+    <circle cx="88" cy="0" r="16" fill="none" stroke="#1F8D87" stroke-opacity="0.25" stroke-width="2"/>
+  </g>
+
+  <!-- ========== STAGE 02 — Classify ========== -->
+  <g transform="translate(534, 38)" filter="url(#panelShadow)">
+    <path fill="#FBF9F4" stroke="#1B1A18" stroke-opacity="0.10" stroke-width="1"
+          d="M 4 0 L 398 0 Q 422 0 422 24 L 422 292 Q 422 316 398 316 L 24 316 Q 0 316 0 292 L 0 4 Q 0 0 4 0 Z"/>
+
+    <text x="28" y="36" fill="#86837C"
+          font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="500"
+          letter-spacing="3.2">CLASSIFY</text>
+
+    <text x="28" y="72" fill="#1B1A18"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="22" font-weight="600"
+          letter-spacing="-0.6">Gesture </text>
+    <text x="118" y="72" fill="#1B1A18"
+          font-family="'Instrument Serif', Georgia, serif" font-size="24" font-style="italic" font-weight="400">engine</text>
+
+    <!-- Dark stage (ink) — matches hero gesture panel -->
+    <rect x="24" y="92" width="374" height="148" rx="18" fill="#1B1A18"/>
+
+    <!-- Abstract hand landmarks (geometric, no emoji) -->
+    <g opacity="0.95">
+      <circle cx="108" cy="200" r="6" fill="#DCE9E7"/>
+      <circle cx="138" cy="168" r="6" fill="#DCE9E7"/>
+      <circle cx="172" cy="150" r="6" fill="#DCE9E7"/>
+      <circle cx="212" cy="148" r="6" fill="#1F8D87"/>
+      <circle cx="252" cy="158" r="6" fill="#DCE9E7"/>
+      <circle cx="286" cy="182" r="6" fill="#DCE9E7"/>
+      <path d="M 108 200 Q 150 175 212 148 T 286 182" fill="none" stroke="#F4F1EA" stroke-opacity="0.25" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <text x="44" y="128" fill="#86837C"
+          font-family="'JetBrains Mono', ui-monospace, monospace" font-size="10" font-weight="500"
+          letter-spacing="2">MEDIAPIPE · LOCAL</text>
+
+    <!-- Bottom chips -->
+    <rect x="28" y="258" width="142" height="30" rx="15" fill="#EDE8DD"/>
+    <text x="42" y="278" fill="#3C3A35"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="12" font-weight="600">Swipe right</text>
+
+    <rect x="182" y="258" width="156" height="30" rx="15" fill="#DCE9E7"/>
+    <text x="196" y="278" fill="#176A66"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="12" font-weight="700">Stable signal</text>
+  </g>
+
+  <!-- Connector 2 -->
+  <g transform="translate(956, 174)">
+    <line x1="0" y1="0" x2="76" y2="0" stroke="url(#connectorFade)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="88" cy="0" r="10" fill="#1F8D87"/>
+    <circle cx="88" cy="0" r="16" fill="none" stroke="#1F8D87" stroke-opacity="0.25" stroke-width="2"/>
+  </g>
+
+  <!-- ========== STAGE 03 — Advance ========== -->
+  <g transform="translate(1056, 52)" filter="url(#panelShadow)">
+    <path fill="#FBF9F4" stroke="#1B1A18" stroke-opacity="0.10" stroke-width="1"
+          d="M 4 0 L 298 0 Q 322 0 322 24 L 322 252 Q 322 276 298 276 L 24 276 Q 0 276 0 252 L 0 4 Q 0 0 4 0 Z"/>
+
+    <text x="28" y="36" fill="#86837C"
+          font-family="'JetBrains Mono', ui-monospace, monospace" font-size="11" font-weight="500"
+          letter-spacing="3.2">ADVANCE</text>
+
+    <text x="28" y="72" fill="#1B1A18"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="22" font-weight="600"
+          letter-spacing="-0.6">Deck </text>
+    <text x="92" y="72" fill="#1B1A18"
+          font-family="'Instrument Serif', Georgia, serif" font-size="24" font-style="italic" font-weight="400">action</text>
+
+    <!-- Slide mock -->
+    <rect x="24" y="92" width="274" height="118" rx="12" fill="#EDE8DD"
+          stroke="#1B1A18" stroke-opacity="0.08"/>
+    <rect x="40" y="108" width="88" height="10" rx="3" fill="#D9D4C7"/>
+    <rect x="40" y="128" width="200" height="8" rx="2" fill="#D9D4C7" opacity="0.75"/>
+    <rect x="40" y="144" width="160" height="8" rx="2" fill="#D9D4C7" opacity="0.55"/>
+
+    <!-- Accent “next” control -->
+    <circle cx="246" cy="150" r="28" fill="#1B1A18"/>
+    <path d="M 252 150 L 238 140 L 238 160 Z" fill="#F4F1EA"/>
+
+    <!-- Mapped actions row -->
+    <text x="28" y="232" fill="#86837C"
+          font-family="'JetBrains Mono', ui-monospace, monospace" font-size="10" font-weight="500"
+          letter-spacing="2.4">MAPPED</text>
+
+    <rect x="28" y="242" width="86" height="22" rx="11" fill="#DCE9E7"/>
+    <text x="46" y="257" fill="#176A66"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="11" font-weight="700">Next</text>
+
+    <rect x="122" y="242" width="72" height="22" rx="11" fill="#EDE8DD"/>
+    <text x="138" y="257" fill="#3C3A35"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="11" font-weight="600">Pause</text>
+
+    <rect x="202" y="242" width="72" height="22" rx="11" fill="#EDE8DD"/>
+    <text x="216" y="257" fill="#3C3A35"
+          font-family="'Inter Tight', Inter, system-ui, sans-serif" font-size="11" font-weight="600">Back</text>
+  </g>
+  </g>
+
+</svg>
