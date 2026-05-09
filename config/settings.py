@@ -163,7 +163,8 @@ IS_SERVERLESS = is_serverless_environment()
 
 # Database
 # Serverless (Vercel, Lambda): require PostgreSQL — SQLite on /tmp is ephemeral and
-# breaks auth/LTI after cold starts; migrations are applied at deploy time (see vercel.json).
+# breaks auth/LTI after cold starts. Prefer migrate during deploy (vercel.json); cold-start
+# migrate runs via ``config.serverless_db`` when the build step does not execute migrations.
 if IS_SERVERLESS:
     _database_url = (os.environ.get('DATABASE_URL') or '').strip()
     if not _database_url:
@@ -186,6 +187,9 @@ else:
             default=f'sqlite:///{db_path}',
         )
     }
+
+# Opt out of cold-start migrate (e.g. when you run migrations only in CI / release phase).
+SKIP_SERVERLESS_STARTUP_MIGRATE = env.bool('SKIP_SERVERLESS_STARTUP_MIGRATE', default=False)
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
