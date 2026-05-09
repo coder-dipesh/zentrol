@@ -1,0 +1,14 @@
+# Shrink upload/build context for Vercel (source still in git for non-Vercel deploys).
+lip2speech/
+docs/
+docker/
+scripts/
+docker-compose.yml
+docker-compose.moodle.yml
+download_mediapipe.sh
+build.sh
+.git/
+.pytest_cache/
+htmlcov/
+media/
+db.sqlite3

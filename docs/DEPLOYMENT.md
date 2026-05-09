@@ -77,6 +77,16 @@ CSRF_TRUSTED_ORIGINS=https://zentrol.example.com
 
 ---
 
+## Vercel (serverless)
+
+The repo ships **`requirements-vercel.txt`** (installed via **`vercel.json`** → `installCommand`) so deployments skip PyTorch / Lip2Speech / dev-only wheels and stay closer to the platform bundle limit.
+
+- **`LIP2SPEECH_ENABLED`** defaults **`False`** when **`VERCEL=1`** — the `lip2speech` Django app and `/lip2speech/*` routes are not loaded.
+- **`.vercelignore`** drops the `lip2speech/` package directory from the uploaded source (you cannot enable Lip2Speech on Vercel without switching to full `requirements.txt` and a hosting tier that fits the bundle — generally use a separate GPU/CPU service instead).
+- Provision **Postgres** (`DATABASE_URL`) in the Vercel dashboard or Marketplace; treat SQLite on `/tmp` as dev-only.
+
+---
+
 ## Checklist before demo
 
 - [ ] `DEBUG=False`, strong `SECRET_KEY` (48+ chars), `ALLOWED_HOSTS` set (no `*`)

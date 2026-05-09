@@ -31,26 +31,38 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
     'host.docker.internal',
 ])
 
+
+def _env_truthy(name: str) -> bool:
+    """Read env before ``IS_SERVERLESS`` is computed (same semantics as serverless check)."""
+    return (os.environ.get(name) or '').strip().lower() in ('1', 'true', 'yes')
+
+
+_VERCEL = _env_truthy('VERCEL')
+# Lip2Speech requires torch/mediacodec stack — excluded from requirements-vercel.txt.
+# Default OFF when VERCEL=1 so serverless bundles stay under platform limits.
+LIP2SPEECH_ENABLED = env.bool('LIP2SPEECH_ENABLED', default=not _VERCEL)
+
 # Application definition
-INSTALLED_APPS = [
+_INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Third party
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
-    
+
     # Local apps
     'gestures',
-    # 'analytics',
-    'lip2speech',
     'moodle',
 ]
+if LIP2SPEECH_ENABLED:
+    _INSTALLED_APPS.append('lip2speech')
+INSTALLED_APPS = _INSTALLED_APPS
 
 # ── Lip2Speech settings ────────────────────────────────────────────────────────
 # Path to pre-trained model weights (.pt file).

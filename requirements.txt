@@ -13,6 +13,10 @@
 # Zentrol inference uses the bundled original_model + torch 2.x stack, not the full
 # legacy training notebook / YouTube / ONNX pipeline from that requirements list.
 #
+# Serverless (Vercel): use requirements-vercel.txt — Lip2Speech / PyTorch are omitted to
+# stay under the ~500 MB function bundle limit; set VERCEL=1 (default on Vercel) and
+# LIP2SPEECH_ENABLED defaults to False (see config/settings.py).
+#
 # ============================================================================
 
 # ============================================================================
