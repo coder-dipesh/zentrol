@@ -64,7 +64,7 @@ A Django-based web application for controlling presentations using hand gestures
    chmod +x scripts/ensure-static-media.sh
    ./scripts/ensure-static-media.sh
    ```
-   See `static/MEDIA.md`.
+   See comments in `scripts/ensure-static-media.sh` for optional demo assets.
 
 7. **Migrate & run**
    ```bash
@@ -78,12 +78,34 @@ A Django-based web application for controlling presentations using hand gestures
 
 - Home: http://127.0.0.1:8000/
 - Presentation: http://127.0.0.1:8000/presentation/
-- MediaPipe test: http://127.0.0.1:8000/test/
 - Admin: http://127.0.0.1:8000/admin/
 - API health: http://127.0.0.1:8000/api/v1/health/
 - OpenAPI / Swagger: when `DEBUG=True` or `SPECTACULAR_PUBLIC=True`
 
-Full deployment notes: **`docs/DEPLOYMENT.md`**.
+Full deployment notes: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+
+---
+
+## Production checklist (summary)
+
+Before going live, set at least:
+
+| Variable | Notes |
+|----------|--------|
+| `DEBUG` | `False` |
+| `SECRET_KEY` | 48+ random characters (required when `DEBUG=False`) |
+| `ALLOWED_HOSTS` | Your domain(s), comma-separated — **never** use `*` |
+| `CSRF_TRUSTED_ORIGINS` | Full origin(s) with scheme, e.g. `https://app.example.com` |
+| `CORS_ALLOWED_ORIGINS` | Same-origin API use: usually your public HTTPS URL |
+| `DATABASE_URL` | PostgreSQL recommended |
+| `LTI_BASE_URL` | Public HTTPS base URL of this app (for Moodle tool config) |
+| `LTI_FRAME_ANCESTORS` | Moodle site origin(s), e.g. `https://moodle.university.edu` — required so CSP allows Moodle to embed Zentrol when `DEBUG=False` |
+| Cache | Run `python manage.py createcachetable` for DB cache, or use Redis for multi-worker LTI |
+| Algolia (optional) | `ALGOLIA_*` keys — admin key stays server-side only |
+
+When `DEBUG=False`, Django sends **`Content-Security-Policy: frame-ancestors`** (built from `LTI_FRAME_ANCESTORS` plus `'self'`) instead of `X-Frame-Options: DENY`, so Moodle LTI iframes keep working.
+
+See [.env.example](.env.example) for all tunables.
 
 ---
 
@@ -282,8 +304,7 @@ zentrol/
 │   ├── lti_config.py       # ToolConfDict builder (PyLTI1p3 2.0 API)
 │   └── management/commands/generate_lti_keys.py
 ├── lip2speech/             # Lip-to-speech synthesis pipeline
-├── analytics/
-├── templates/              # HTML: home, dashboard, presentation, test_mediapipe
+├── templates/              # HTML: home, dashboard, presentation, auth
 ├── static/                 # MediaPipe, JS, CSS, media
 ├── docker/                 # Moodle Docker image (Dockerfile.moodle, moodle-init.sh)
 ├── docs/                   # ARCHITECTURE, DEPLOYMENT, API_INVENTORY, ADR/
@@ -310,14 +331,34 @@ Copy **`.env.example`** to `.env` and adjust. Key entries:
 | `SPECTACULAR_PUBLIC` | If `True`, expose `/api/schema/` and `/api/docs/` when `DEBUG=False` |
 | `CACHE_BACKEND` | Django cache backend (use `DatabaseCache` for LTI OIDC state) |
 | `CACHE_LOCATION` | Cache table name for `DatabaseCache` (default: `zentrol_cache_table`) |
+| `LTI_FRAME_ANCESTORS` | Moodle origin(s) for CSP `frame-ancestors` when `DEBUG=False` (comma-separated HTTPS origins) |
 | `LTI_BASE_URL` | Public HTTPS URL Django is reachable at — used in LTI config JSON and launch redirects |
 | `LIP2SPEECH_WEIGHTS_PATH` | Path to pre-trained Lip2Speech `.pt` weights file |
+| `ALGOLIA_APP_ID` | Algolia Application ID (enables dashboard ⌘K live search) |
+| `ALGOLIA_ADMIN_API_KEY` | Algolia **Admin** API key — server-side only (used to push records & configure index) |
+| `ALGOLIA_SEARCH_API_KEY` | Algolia **Search-only** API key — used as parent for per-user secured browser keys |
+| `ALGOLIA_INDEX_NAME` | Index to write into (default `zentrol_presentations`) |
+
+### Dashboard search (Algolia)
+
+The dashboard ⌘K modal uses [Algolia](https://www.algolia.com/) when configured.
+After setting the four `ALGOLIA_*` env vars above, push your existing decks once:
+
+```bash
+python manage.py reindex_algolia
+```
+
+After that, every new / updated / deleted `PresentationAsset` is auto-synced via
+Django signals (see `gestures/signals.py`). The browser only ever holds a
+**per-user secured search key** scoped to a `userID:<id>` filter, so users can
+only retrieve their own decks even though search runs entirely client-side.
+If the env vars are unset, the modal silently falls back to a static
+"recent decks" list — nothing breaks in dev.
 
 ## API endpoints (quick reference)
 
 - `GET /` — Home / demo
 - `GET /presentation/` — Gesture presentation
-- `GET /test/` — MediaPipe smoke test
 - `GET /api/v1/health/` — Health JSON
 - `POST /api/log-gesture/` — DRF gesture log (throttled; optional shared secret)
 - `GET/POST /api/gesture-logs/` — DRF router

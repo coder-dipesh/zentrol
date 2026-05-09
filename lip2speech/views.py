@@ -115,7 +115,10 @@ def synthesize(request):
         return response
 
     except ImportError as exc:
-        msg = f"Missing dependency: {exc}. Install torch, librosa, mediapipe, opencv-python."
+        msg = (
+            f"Missing dependency: {exc}. "
+            "Install torch, torchaudio, torchvision, librosa, mediapipe, opencv-python-headless, facenet-pytorch."
+        )
         logger.exception(msg)
         log.status = 'error'
         log.error_message = msg

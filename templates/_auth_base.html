@@ -1,0 +1,379 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Zentrol{% endblock %}</title>
+
+  <link rel="icon" type="image/svg+xml" href="{% static 'media/logo/zentrol-icon.svg' %}">
+  <link rel="apple-touch-icon" href="{% static 'media/logo/zentrol-icon.svg' %}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans:  ['"Inter Tight"', 'system-ui', 'sans-serif'],
+            serif: ['"Instrument Serif"', 'serif'],
+            mono:  ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            paper:     '#F4F1EA',
+            paperDeep: '#EDE8DD',
+            ink:       '#1B1A18',
+            ink2:      '#3C3A35',
+            mute:      '#86837C',
+            line:      '#D9D4C7',
+            sand:      '#FBF9F4',
+            accent:    '#1F8D87',
+            accent2:   '#176A66',
+            accentSoft:'#DCE9E7',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root { --ink:#1B1A18; --paper:#F4F1EA; --accent:#1F8D87; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    ::selection { background: #1B1A18; color: #F4F1EA; }
+
+    /* Subtle paper grain — break digital flatness */
+    .grain {
+      position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      mix-blend-mode: multiply; opacity: 0.06;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    }
+
+    .display {
+      font-weight: 600;
+      font-size: clamp(36px, 5.6vw, 56px);
+      line-height: 0.96;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+    .display em {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-weight: 400;
+    }
+    .eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #6f6c64;
+    }
+    .num {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px; letter-spacing: 0.12em; color: #86837C;
+    }
+
+    /* Frame card — sand surface, broken radius, tinted shadow */
+    .frame {
+      background: #FBF9F4;
+      border-radius: 4px 24px 24px 24px;
+      border: 1px solid rgba(27,26,24,0.10);
+      box-shadow:
+        0 1px 0 rgba(27,26,24,0.04),
+        0 30px 60px -30px rgba(31,141,135,0.18),
+        0 18px 36px -24px rgba(27,26,24,0.18);
+    }
+
+    /* Inputs styled when Django renders inside <div class="auth-input"> */
+    .auth-input input,
+    .auth-input textarea {
+      width: 100%;
+      background: #FFFFFF;
+      border: 1px solid rgba(27,26,24,0.14);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--ink);
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .auth-input input:focus,
+    .auth-input textarea:focus {
+      outline: none;
+      border-color: rgba(31,141,135,0.55);
+      box-shadow: 0 0 0 3px rgba(31,141,135,0.18);
+      background: #fff;
+    }
+    .auth-input input::placeholder { color: rgba(27,26,24,0.32); }
+
+    /* Help / error text Django renders */
+    .auth-input .helptext { display: block; margin-top: 6px; font-size: 12px; color: #86837C; }
+    .auth-input ul.errorlist { margin: 6px 0 0; padding: 0; list-style: none; font-size: 12px; color: #b3261e; }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+      width: 100%;
+      padding: 14px 22px;
+      background: #1B1A18; color: #F4F1EA;
+      border-radius: 999px;
+      font-weight: 500; font-size: 14px;
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), background .2s ease;
+      border: 1px solid #1B1A18;
+    }
+    .btn-primary:hover { transform: translateY(-1px) scale(1.005); background: #2a2925; }
+    .btn-primary:active { transform: translateY(0) scale(0.985); }
+    .btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .btn-primary svg { transition: transform .25s ease; }
+    .btn-primary:hover svg { transform: translateX(3px); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+      padding: 12px 18px; border-radius: 999px;
+      font-weight: 500; font-size: 14px; color: #1B1A18;
+      transition: background .2s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+      border: 1px solid rgba(27,26,24,0.16);
+      background: transparent;
+    }
+    .btn-ghost:hover { background: rgba(27,26,24,0.05); transform: translateY(-1px); }
+    .btn-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    a.inline-link { color: var(--ink); position: relative; font-weight: 500; }
+    a.inline-link::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -2px;
+      height: 1px; background: rgba(27,26,24,0.35);
+      transform: scaleX(1); transform-origin: right;
+      transition: transform .35s cubic-bezier(.6,0,.2,1);
+    }
+    a.inline-link:hover::after { transform: scaleX(0); transform-origin: left; }
+
+    /* Reveal-on-load */
+    .reveal-up { opacity: 0; transform: translateY(10px); animation: rev .7s cubic-bezier(.2,.7,.2,1) .05s forwards; }
+    .reveal-up.d2 { animation-delay: .15s; }
+    .reveal-up.d3 { animation-delay: .25s; }
+    .reveal-up.d4 { animation-delay: .35s; }
+    @keyframes rev { to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .reveal-up { animation: none; opacity: 1; transform: none; } }
+
+    /* Background visual: soft mesh on the right pane (desktop) */
+    .auth-art {
+      position: relative; overflow: hidden; isolation: isolate;
+      background: #1B1A18; color: #F4F1EA;
+    }
+    .auth-art::before {
+      content: ""; position: absolute; inset: 0; z-index: 0;
+      background:
+        radial-gradient(80% 60% at 8% 12%,  rgba(31,141,135,0.40) 0%, rgba(31,141,135,0) 60%),
+        radial-gradient(70% 60% at 90% 90%, rgba(244,241,234,0.10) 0%, rgba(244,241,234,0) 60%);
+    }
+    .auth-art > * { position: relative; z-index: 1; }
+
+    /* Tabular numerals where data appears */
+    .tnum { font-variant-numeric: tabular-nums; }
+
+    .hairline { height: 1px; background: rgba(27,26,24,0.10); }
+
+    /* Single-screen auth (e.g. register): lock to one viewport height. */
+    html:has(body.auth-viewport-lock) {
+      height: 100%;
+      overflow: hidden;
+    }
+    body.auth-viewport-lock {
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+    }
+    body.auth-viewport-lock #main {
+      height: 100%;
+      min-height: 0;
+    }
+    body.auth-viewport-lock #auth-form-pane {
+      min-height: 0;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+    @media (min-width: 640px) {
+      body.auth-viewport-lock #auth-form-pane {
+        padding-left: 2.5rem;
+        padding-right: 2.5rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      body.auth-viewport-lock #auth-form-pane {
+        padding-left: 4rem;
+        padding-right: 4rem;
+      }
+    }
+    body.auth-viewport-lock #auth-form-slot {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+      /* Rare overflow (validation errors): scroll inside slot, not whole page */
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    body.auth-viewport-lock #auth-form-pane > footer {
+      margin-top: 0.5rem;
+    }
+    body.auth-viewport-lock #auth-aside-pane {
+      min-height: 0;
+      overflow: hidden;
+      padding-top: 1.25rem;
+      padding-bottom: 1.25rem;
+      padding-left: 3rem;
+      padding-right: 3rem;
+    }
+    body.auth-viewport-lock #auth-aside-pane .display {
+      font-size: clamp(28px, 3.2vw, 44px);
+      line-height: 0.98;
+    }
+    body.auth-viewport-lock #auth-aside-pane .aside-lead {
+      margin-top: 1rem !important;
+      font-size: 14px !important;
+      line-height: 1.45 !important;
+    }
+    body.auth-viewport-lock #auth-aside-pane .aside-spec {
+      gap: 0.65rem !important;
+      margin-top: 0 !important;
+    }
+    body.auth-viewport-lock #auth-aside-pane .aside-spec li p.mt-1 {
+      margin-top: 0.15rem !important;
+      font-size: 13px !important;
+    }
+    body.auth-viewport-lock .auth-register-compact .display {
+      font-size: clamp(26px, 3.8vw, 42px);
+      line-height: 0.98;
+    }
+    body.auth-viewport-lock .auth-register-compact .auth-input input {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    body.auth-viewport-lock .auth-register-compact label.mb-2 {
+      margin-bottom: 0.35rem;
+    }
+    body.auth-viewport-lock .auth-register-compact .btn-primary {
+      padding-top: 11px;
+      padding-bottom: 11px;
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="min-h-screen {% block auth_body_class %}{% endblock %}">
+
+  <div class="grain" aria-hidden="true"></div>
+
+  <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-paper">Skip to content</a>
+
+  <main id="main" class="relative grid min-h-screen min-h-0 grid-cols-1 lg:grid-cols-2">
+
+    <!-- Form pane (left) -->
+    <section id="auth-form-pane" class="flex min-h-0 flex-col justify-between px-6 py-8 sm:px-12 sm:py-12 lg:px-20 lg:py-16">
+      <header class="reveal-up flex shrink-0 items-center justify-between">
+        <a href="/" class="flex items-center gap-2.5">
+          <img src="{% static 'media/logo/zentrol-icon.svg' %}" alt="Zentrol" class="h-7 w-7" />
+          <span class="text-[15px] font-medium tracking-tight">Zentrol</span>
+        </a>
+        <a href="/" class="num hidden sm:inline">↩  back to home</a>
+      </header>
+
+      <div id="auth-form-slot" class="mx-auto w-full max-w-[440px] py-12 lg:min-h-0 lg:flex-1 lg:py-0 lg:flex lg:flex-col lg:justify-center">
+        {% block form_card %}{% endblock %}
+      </div>
+
+      <footer class="reveal-up d4 mt-10 flex shrink-0 items-center justify-between text-[12px] text-mute lg:mt-0">
+        <p>© 2026 Zentrol</p>
+        <p class="font-mono tracking-wider">v1.0</p>
+      </footer>
+    </section>
+
+    <!-- Editorial pane (right, hidden on mobile) -->
+    <aside id="auth-aside-pane" class="auth-art hidden lg:flex lg:min-h-0 lg:flex-col lg:justify-between lg:px-16 lg:py-16">
+      <div>
+        <span class="eyebrow" style="color:#A9A59A">— a small piece of software</span>
+        <h2 class="display mt-6">
+          Present without<br/>
+          <em>a remote.</em>
+        </h2>
+        <p class="aside-lead mt-7 max-w-[44ch] text-[16px] leading-relaxed" style="color:#C9C5B8;">
+          Upload a deck. Wave to advance. Every slide is read aloud in your own browser. No clicker. No dongle. No upload.
+        </p>
+      </div>
+
+      <ul class="aside-spec grid max-w-[40ch] gap-5">
+        <li>
+          <p class="num" style="color:#A9A59A">latency</p>
+          <p class="mt-1 text-[15px] tnum">~24 ms / frame</p>
+        </li>
+        <li>
+          <p class="num" style="color:#A9A59A">privacy</p>
+          <p class="mt-1 text-[15px]">Camera frames stay on your device.</p>
+        </li>
+        <li>
+          <p class="num" style="color:#A9A59A">setup</p>
+          <p class="mt-1 text-[15px] tnum">2 minutes — webcam only.</p>
+        </li>
+      </ul>
+    </aside>
+
+  </main>
+
+  <script>
+    // Add password show/hide affordance to any password field on the page.
+    (function () {
+      const eyeOn  =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">' +
+        '<path d="M1.5 12s4.5-7.5 10.5-7.5S22.5 12 22.5 12s-4.5 7.5-10.5 7.5S1.5 12 1.5 12Z" />' +
+        '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" /></svg>';
+      const eyeOff =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">' +
+        '<path d="M1.5 12s4.5-7.5 10.5-7.5S22.5 12 22.5 12s-4.5 7.5-10.5 7.5S1.5 12 1.5 12Z" />' +
+        '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />' +
+        '<path d="M3 3l18 18" /></svg>';
+
+      document.querySelectorAll('input[type="password"]').forEach(function (input) {
+        if (!input || input.dataset.pwToggleInit === '1') return;
+        input.dataset.pwToggleInit = '1';
+        const wrapper = input.parentElement;
+        if (!wrapper) return;
+        wrapper.style.position = 'relative';
+        input.style.paddingRight = '40px';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'absolute right-3 top-1/2 -translate-y-1/2 text-mute hover:text-ink focus:outline-none';
+        btn.style.cssText = 'background:transparent;border:0;padding:4px;cursor:pointer;';
+        btn.innerHTML = eyeOn;
+        btn.setAttribute('aria-label', 'Show password');
+        function syncIcon() {
+          const showing = input.type === 'text';
+          btn.innerHTML = showing ? eyeOff : eyeOn;
+          btn.setAttribute('aria-label', showing ? 'Hide password' : 'Show password');
+        }
+        btn.addEventListener('click', function () {
+          input.type = input.type === 'password' ? 'text' : 'password';
+          syncIcon();
+        });
+        wrapper.appendChild(btn);
+        syncIcon();
+      });
+    })();
+  </script>
+  {% block extra_body %}{% endblock %}
+</body>
+</html>

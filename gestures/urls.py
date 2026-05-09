@@ -32,5 +32,4 @@ urlpatterns = [
     path('presentation/', views.presentation_view, name='presentation'),
     path('api/log-gesture/', views.api_log_gesture, name='log_gesture'),
     path('api/', include(router.urls)),
-    path('test/', views.test_view, name='test'),
 ]

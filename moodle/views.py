@@ -31,13 +31,29 @@ from pylti1p3.contrib.django import (
     DjangoMessageLaunch,
     DjangoOIDCLogin,
 )
-from pylti1p3.exception import LtiException
+from pylti1p3.exception import LtiException, OIDCException
 from pylti1p3.grade import Grade
 
 from .lti_config import get_tool_conf
 from .models import LTISession, LTITool, LTIUserMapping
 
 logger = logging.getLogger(__name__)
+
+
+def _lti_public_base_url(request) -> str:
+    """Public origin for LTI URLs (matches ``lti_config`` / Moodle tool registration)."""
+    from django.conf import settings as dj_settings
+
+    lti_base = (getattr(dj_settings, 'LTI_BASE_URL', '') or '').strip().rstrip('/')
+    if lti_base:
+        return lti_base
+    return request.build_absolute_uri('/').rstrip('/')
+
+
+def _oidc_param(request, key: str) -> str:
+    """OIDC initiation params may arrive on GET (redirect) or POST (form)."""
+    return (request.GET.get(key) or request.POST.get(key) or '').strip()
+
 
 # ── LTI constants ──────────────────────────────────────────────────────────────
 _CTX_CLAIM = 'https://purl.imsglobal.org/spec/lti/claim/context'
@@ -55,6 +71,44 @@ def lti_login(request):
     Moodle calls this first; we redirect the user's browser back to Moodle to
     complete the OIDC handshake.
     """
+    base = _lti_public_base_url(request)
+    iss = _oidc_param(request, 'iss')
+    login_hint = _oidc_param(request, 'login_hint')
+
+    if not iss:
+        return JsonResponse(
+            {
+                'error': 'LTI OIDC parameters missing',
+                'detail': (
+                    'No `iss` (issuer) in this request. The LMS must start the tool by '
+                    'redirecting the browser here with OpenID parameters — you cannot open '
+                    '`/moodle/lti/login/` directly like a normal web page.'
+                ),
+                'hint': (
+                    'In Moodle: add an External tool activity, set the tool URL to your '
+                    '`…/moodle/lti/config/` JSON or matching manual URLs, then launch the '
+                    'activity from the course. If Moodle and Django use different hostnames '
+                    '(Docker, HTTPS vs HTTP), set LTI_BASE_URL in Django to the URL Moodle uses.'
+                ),
+                'tool_config_url': f'{base}/moodle/lti/config/',
+            },
+            status=400,
+        )
+
+    if not login_hint:
+        return JsonResponse(
+            {
+                'error': 'LTI OIDC parameters missing',
+                'detail': (
+                    'No `login_hint` in this request. Moodle should send this on the first '
+                    'OIDC redirect; if it is missing, the tool was not opened from Moodle '
+                    'or the platform is misconfigured.'
+                ),
+                'tool_config_url': f'{base}/moodle/lti/config/',
+            },
+            status=400,
+        )
+
     tool_conf = get_tool_conf()
     launch_data_storage = DjangoCacheDataStorage()
 
@@ -64,16 +118,31 @@ def lti_login(request):
         )
         target_link_uri = (
             request.POST.get('target_link_uri')
-            or request.GET.get('target_link_uri', '')
-        )
+            or request.GET.get('target_link_uri')
+            or ''
+        ).strip()
+        # Moodle normally sends target_link_uri. If missing (e.g. opening this URL
+        # directly in a browser), PyLTI1p3 raises OIDCException("No launch URL configured").
+        if not target_link_uri:
+            target_link_uri = f'{base}/moodle/lti/launch/'
         # Do NOT call enable_check_cookies() — it falls back to a plain GET
         # redirect when third-party cookies are blocked in Moodle's iframe,
         # which breaks the state validation on the launch endpoint.
         # State is persisted in DatabaseCache (DjangoCacheDataStorage), not cookies.
         return oidc_login.redirect(target_link_uri)
-    except LtiException as exc:
-        logger.exception("LTI OIDC login failed: %s", exc)
-        return JsonResponse({'error': 'LTI login failed', 'detail': str(exc)}, status=400)
+    except (LtiException, OIDCException) as exc:
+        detail = str(exc)
+        log_fn = logger.warning if detail.startswith('Could not find') else logger.exception
+        log_fn("LTI OIDC login failed: %s", exc)
+        payload = {'error': 'LTI login failed', 'detail': detail}
+        if 'registration' in detail.lower() or 'issuer' in detail.lower():
+            payload['hint'] = (
+                'Check Django admin → Moodle → LTI tools: `issuer` must exactly match '
+                'the `iss` value Moodle sends (usually your Moodle site URL, with same '
+                'scheme and trailing slash as Moodle uses).'
+            )
+            payload['tool_config_url'] = f'{base}/moodle/lti/config/'
+        return JsonResponse(payload, status=400)
 
 
 # ── Step 2 — JWT launch / user provisioning ────────────────────────────────────
@@ -175,9 +244,7 @@ def lti_config(request):
     """
     # Use LTI_BASE_URL when set (needed for local Docker testing where Moodle
     # reaches Django via host.docker.internal, not localhost).
-    from django.conf import settings as dj_settings
-    lti_base = getattr(dj_settings, 'LTI_BASE_URL', '').rstrip('/')
-    base = lti_base or request.build_absolute_uri('/').rstrip('/')
+    base = _lti_public_base_url(request)
     config = {
         "title": "Zentrol — Gesture Presentation",
         "description": (

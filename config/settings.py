@@ -4,7 +4,9 @@ Django settings for gesture_presentation project.
 
 import os
 from pathlib import Path
+
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,18 +16,19 @@ env = environ.Env()
 env.read_env(BASE_DIR / '.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-dev-key-change-in-production')
+_SECRET_DEFAULT = 'django-insecure-dev-key-change-in-production'
+SECRET_KEY = env('SECRET_KEY', default=_SECRET_DEFAULT)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=True)
 
-# Never use '*' in production — set explicit hosts / domains.
+# Never use '*' — set explicit hosts. Production must set ALLOWED_HOSTS to real domains.
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
     'localhost',
     '127.0.0.1',
-    '.ngrok-free.app',       # ngrok static domain tunnels (subdomain wildcard)
-    '.ngrok-free.dev',       # ngrok free dev tunnels
-    'host.docker.internal',  # Docker → host (local Moodle LTI testing)
+    '.ngrok-free.app',
+    '.ngrok-free.dev',
+    'host.docker.internal',
 ])
 
 # Application definition
@@ -80,6 +83,11 @@ CACHES = {
 # Set this in production to your public domain, e.g. https://zentrol.example.com
 LTI_BASE_URL = env('LTI_BASE_URL', default='')
 
+# Origins allowed to embed Zentrol in an iframe (Moodle site URLs), without trailing slash.
+# Required for Moodle LTI when DEBUG=False — CSP frame-ancestors is built from this list plus 'self'.
+# Example: LTI_FRAME_ANCESTORS=https://moodle.university.edu
+LTI_FRAME_ANCESTORS = env.list('LTI_FRAME_ANCESTORS', default=[])
+
 # ── Reverse-proxy / ngrok SSL header ──────────────────────────────────────────
 # ngrok (and most reverse proxies) terminate TLS and forward requests as HTTP
 # to Django. Without this setting, request.is_secure() returns False and
@@ -98,6 +106,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'config.middleware.FrameAncestorsCSPMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -225,10 +234,6 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
 
-# Allow Moodle to embed Zentrol pages in an iframe.
-# XFrameOptionsMiddleware default is SAMEORIGIN which blocks cross-origin iframes.
-X_FRAME_OPTIONS = 'ALLOWALL'
-
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     'http://localhost:8000',
     'http://127.0.0.1:8000',
@@ -268,6 +273,27 @@ SPECTACULAR_PUBLIC = env.bool('SPECTACULAR_PUBLIC', default=False)
 # If set, requests without matching X-Zentrol-Gesture-Log-Secret header get 403.
 GESTURE_LOG_SHARED_SECRET = env('GESTURE_LOG_SHARED_SECRET', default='').strip()
 
+# ── Algolia search ────────────────────────────────────────────────────────────
+# Powers the dashboard ⌘K "Jump to" search. Optional — if ALGOLIA_APP_ID /
+# ALGOLIA_ADMIN_API_KEY are not set, the search modal falls back to a static
+# server-rendered list and no Algolia code paths run. To enable:
+#   1. Create an Algolia app at https://www.algolia.com/
+#   2. Set the three env vars below.
+#   3. Run `python manage.py reindex_algolia` to push existing decks.
+# Auto-sync of new/updated/deleted decks is wired via Django signals.
+#
+# Key roles (do NOT swap them):
+#   ALGOLIA_ADMIN_API_KEY   — server-side only; used to push records and
+#                             configure the index. Never sent to the browser.
+#   ALGOLIA_SEARCH_API_KEY  — public search-only key; used as the "parent"
+#                             when minting per-user secured keys for the
+#                             browser. Restricted by Algolia to search only.
+ALGOLIA_APP_ID = env('ALGOLIA_APP_ID', default='').strip()
+ALGOLIA_ADMIN_API_KEY = env('ALGOLIA_ADMIN_API_KEY', default='').strip()
+ALGOLIA_SEARCH_API_KEY = env('ALGOLIA_SEARCH_API_KEY', default='').strip()
+ALGOLIA_INDEX_NAME = env('ALGOLIA_INDEX_NAME', default='zentrol_presentations').strip()
+ALGOLIA_ENABLED = bool(ALGOLIA_APP_ID and ALGOLIA_ADMIN_API_KEY)
+
 # Email (password reset / auth notifications)
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = env('EMAIL_HOST', default='localhost')
@@ -290,7 +316,24 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=True)
     SECURE_CONTENT_TYPE_NOSNIFF = env.bool('SECURE_CONTENT_TYPE_NOSNIFF', default=True)
     SECURE_BROWSER_XSS_FILTER = env.bool('SECURE_BROWSER_XSS_FILTER', default=True)
-    X_FRAME_OPTIONS = 'DENY'
+    # Omit X-Frame-Options so CSP frame-ancestors controls embedding (Moodle LTI).
+    X_FRAME_OPTIONS = None
+    _fa_parts = ["'self'"]
+    for _raw in LTI_FRAME_ANCESTORS:
+        _u = (_raw or '').strip().rstrip('/')
+        if _u and _u not in _fa_parts:
+            _fa_parts.append(_u)
+    LTI_FRAME_ANCESTORS_CSP = 'frame-ancestors ' + ' '.join(_fa_parts)
+    _sk = (SECRET_KEY or '').strip()
+    if _sk == _SECRET_DEFAULT or len(_sk) < 48:
+        raise ImproperlyConfigured(
+            'SECRET_KEY must be set to a long random value (48+ characters) when DEBUG=False. '
+            'Do not use the default development key in production.'
+        )
+else:
+    # Dev / DEBUG: permissive framing for local and ngrok HTTPS testing.
+    X_FRAME_OPTIONS = 'ALLOWALL'
+    LTI_FRAME_ANCESTORS_CSP = ''
 
 # Logging
 # Use the IS_SERVERLESS variable already defined above

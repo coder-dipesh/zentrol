@@ -3,7 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 try:
 	from .modules import VideoExtractor, FaceRecognizer, Decoder
-except ModuleNotFoundError: 
+except ModuleNotFoundError as exc:
+	# A bare ``except ModuleNotFoundError`` also catches failures *inside*
+	# ``model.modules`` (e.g. missing ``facenet_pytorch``), then the fallback
+	# ``from modules`` fails with a confusing ``No module named 'modules'``.
+	name = getattr(exc, 'name', '') or ''
+	if name and name.split('.')[-1] != 'modules':
+		raise
 	from modules import VideoExtractor, FaceRecognizer, Decoder
 
 
