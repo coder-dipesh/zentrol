@@ -107,6 +107,14 @@ When `DEBUG=False`, Django sends **`Content-Security-Policy: frame-ancestors`** 
 
 See [.env.example](.env.example) for all tunables.
 
+### Vercel (serverless)
+
+- **`vercel.json`** runs **`pip install -r requirements-vercel.txt`** — no PyTorch/Lip2Speech stack (keeps the bundle under the platform limit).
+- **`VERCEL=1`** is set by Vercel; **`LIP2SPEECH_ENABLED`** defaults to **`False`** so the `lip2speech` app and routes are omitted (see [`config/settings.py`](config/settings.py)).
+- **`.vercelignore`** excludes the `lip2speech/` source tree from the upload (large ML code + optional weights paths).
+- Use **managed Postgres** (`DATABASE_URL`). SQLite on `/tmp` is ephemeral and not suitable for production data.
+- **Server-side `.pptx`** conversion needs LibreOffice — still unavailable on Vercel; use client-side deck flows or an external worker.
+
 ---
 
 ## Moodle LTI 1.3 Integration — Local Testing
@@ -328,6 +336,7 @@ Copy **`.env.example`** to `.env` and adjust. Key entries:
 | `CORS_ALLOWED_ORIGINS` | Origins allowed to call the API |
 | `CSRF_TRUSTED_ORIGINS` | Trusted origins for CSRF (include your ngrok URL for LTI testing) |
 | `GESTURE_LOG_SHARED_SECRET` | Optional; if set, `POST /api/log-gesture/` requires `X-Zentrol-Gesture-Log-Secret` header |
+| `LIP2SPEECH_ENABLED` | Defaults `False` when `VERCEL=1` — Lip2Speech omitted from `requirements-vercel.txt` bundles |
 | `SPECTACULAR_PUBLIC` | If `True`, expose `/api/schema/` and `/api/docs/` when `DEBUG=False` |
 | `CACHE_BACKEND` | Django cache backend (use `DatabaseCache` for LTI OIDC state) |
 | `CACHE_LOCATION` | Cache table name for `DatabaseCache` (default: `zentrol_cache_table`) |

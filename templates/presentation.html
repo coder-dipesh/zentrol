@@ -520,6 +520,7 @@
                     </div>
                 </section>
 
+                {% if lip2speech_enabled %}
                 <!-- Lip to Speech -->
                 <section id="hub-section-lip2speech" class="scroll-mt-2 rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 ring-1 ring-violet-400/10">
                     <div class="mb-3 flex items-center justify-between">
@@ -563,6 +564,7 @@
                         </select>
                     </div>
                 </section>
+                {% endif %}
 
                 <!-- Actions -->
                 <section id="hub-section-actions" class="scroll-mt-2 rounded-xl border border-white/10 bg-black/25 p-3 ring-1 ring-black/30">
@@ -823,7 +825,9 @@
     <script src="{% static 'js/narration.js' %}"></script>
     <script src="{% static 'js/presentation.js' %}"></script>
     <script src="{% static 'js/aac_engine.js' %}"></script>
+    {% if lip2speech_enabled %}
     <script src="{% static 'js/lip2speech.js' %}"></script>
+    {% endif %}
     {{ initial_slides|json_script:"initial-slides-json" }}
 
     <!-- Main Application Script -->
@@ -1485,6 +1489,7 @@
             initializeGestureControl();
         });
 
+        {% if lip2speech_enabled %}
         // ================================================================
         // Lip to Speech — live integration
         // ================================================================
@@ -1561,6 +1566,7 @@
                 }
             });
         })();
+        {% endif %}
 
         // ================================================================
         // Error Recovery

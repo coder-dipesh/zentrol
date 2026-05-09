@@ -450,6 +450,7 @@ def presentation_view(request):
         'is_authenticated': request.user.is_authenticated,
         'initial_slides': initial_slides,
         'initial_asset_title': initial_asset_title,
+        'lip2speech_enabled': settings.LIP2SPEECH_ENABLED,
     })
 
 
