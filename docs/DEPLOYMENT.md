@@ -79,10 +79,10 @@ CSRF_TRUSTED_ORIGINS=https://zentrol.example.com
 
 ## Vercel (serverless)
 
-The repo ships **`requirements-vercel.txt`** (installed via **`vercel.json`** → `installCommand`) so deployments skip PyTorch / Lip2Speech / dev-only wheels and stay closer to the platform bundle limit.
+The repo ships **`requirements-vercel.txt`** (installed via **`vercel.json`** → `installCommand`) so deployments stay under Vercel’s **Python bundle limit (~245 MB)** — PyTorch / Lip2Speech / **PyMuPDF** / the Algolia client wheel are omitted by default.
 
 - **`LIP2SPEECH_ENABLED`** defaults **`False`** when **`VERCEL=1`** — the `lip2speech` Django app and `/lip2speech/*` routes are not loaded.
-- **`.vercelignore`** drops the `lip2speech/` package directory from the uploaded source (you cannot enable Lip2Speech on Vercel without switching to full `requirements.txt` and a hosting tier that fits the bundle — generally use a separate GPU/CPU service instead).
+- **`.vercelignore`** drops the `lip2speech/` package directory and **demo `static/media/slides/` + `static/media/video/`** from the uploaded source (home hero skips the MP4 on serverless; `/presentation/` demo thumbnails may 404 — user decks still work).
 - **`DATABASE_URL`** is **required** and must be **PostgreSQL** (`postgres://` or `postgresql://`). Django raises at startup if it is missing or SQLite — serverless filesystems are not suitable for SQLite-backed auth.
 - Set **`DATABASE_URL`**, **`SECRET_KEY`** (48+ chars), and **`DEBUG=False`** (plus hosts/CSRF) in the Vercel project environment so **build** can run migrations.
 - **`vercel.json`** → **`buildCommand`** runs **`collectstatic`**, **`migrate --noinput`**, and **`createcachetable`** when Vercel actually executes custom builds — Python deployments sometimes omit this step, so **`config/serverless_db.py`** also runs **`migrate`** + **`createcachetable`** on each serverless cold start (disable with **`SKIP_SERVERLESS_STARTUP_MIGRATE=True`** only if you always migrate elsewhere).

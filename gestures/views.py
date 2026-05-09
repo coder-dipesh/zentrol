@@ -8,7 +8,6 @@ import tempfile
 import uuid
 from pathlib import Path
 
-import fitz
 from PIL import Image
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -150,6 +149,14 @@ def _render_slides_with_libreoffice(uploaded_file, user_id, asset_id):
                 pdf_path = alt_pdf
             else:
                 raise RuntimeError('LibreOffice did not produce a PDF for slide export.')
+
+        try:
+            import fitz  # PyMuPDF — omitted from requirements-vercel.txt (bundle size)
+        except ImportError as exc:
+            raise RuntimeError(
+                'PDF slide rasterization requires PyMuPDF (install locally or use full '
+                'requirements.txt). Serverless bundles skip it.'
+            ) from exc
 
         slides = []
         doc = fitz.open(pdf_path)
