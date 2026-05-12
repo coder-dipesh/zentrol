@@ -510,6 +510,12 @@
                     <label for="account-email-edit" class="mb-1 block text-[12.5px] font-medium text-ink2">Email</label>
                     <input type="email" name="email" id="account-email-edit" maxlength="254" value="{{ request.user.email|default:'' }}" class="ink-input" />
                   </div>
+                  <p id="account-profile-error" class="hidden text-sm leading-snug text-red-600" role="alert"></p>
+                  {% if IS_SERVERLESS %}
+                  <p class="text-[11px] leading-snug text-ink2">
+                    Photos compress before upload.
+                  </p>
+                  {% endif %}
                 </div>
               </form>
             </div>
@@ -633,7 +639,7 @@
           </div>
 
           <div class="flex justify-end border-t border-line bg-paper px-6 py-4">
-            <button type="submit" form="account-profile-form" class="btn-primary">Done</button>
+            <button type="submit" form="account-profile-form" id="account-profile-submit" class="btn-primary">Done</button>
           </div>
         </div>
       </div>
@@ -688,14 +694,15 @@
             <div id="upload-progress-bar" class="h-full w-0 rounded-full"></div>
           </div>
           <p id="upload-error-text" class="mt-2 hidden text-sm text-red-600"></p>
-          {% if dashboard_max_request_body_bytes %}
+          {% if dashboard_max_request_body_bytes or IS_SERVERLESS %}
           <p class="mt-3 text-[11px] leading-snug text-ink2">
-            Tip: this host accepts saves up to about <strong>{{ dashboard_max_request_body_bytes|filesizeformat }}</strong> per upload (request size limit). Images and many slides grow the payload—compress media or split the deck if saving fails.
-          </p>
-          {% endif %}
-          {% if IS_SERVERLESS %}
-          <p class="mt-2 text-[11px] leading-snug text-ink2">
-            On this deployment, slide thumbnails are drawn in your browser from the .pptx structure—fonts and layout may differ slightly from PowerPoint. Self-hosted installs can use LibreOffice for a closer match.
+            {% if dashboard_max_request_body_bytes and IS_SERVERLESS %}
+            Max ~<strong>{{ dashboard_max_request_body_bytes|filesizeformat }}</strong> · slides preview in-browser (approximate).
+            {% elif dashboard_max_request_body_bytes %}
+            Max ~<strong>{{ dashboard_max_request_body_bytes|filesizeformat }}</strong> per save.
+            {% else %}
+            Slide previews are in-browser (approximate).
+            {% endif %}
           </p>
           {% endif %}
         </section>
@@ -1102,6 +1109,8 @@
         dashToastTimer = null;
       }, ms);
     }
+
+    window.ZentrolDashboardToast = showDashboardToast;
 
     function getCSRFToken() {
       const name = 'csrftoken=';
@@ -1649,6 +1658,11 @@
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('overflow-hidden');
+        var pe = document.getElementById('account-profile-error');
+        if (pe) {
+          pe.textContent = '';
+          pe.classList.add('hidden');
+        }
       }
       function closeAccountModal() {
         if (!modal) return;
@@ -1757,6 +1771,172 @@
           avatarImg.src = url;
           avatarImg.classList.remove('hidden');
           avatarInitials.classList.add('hidden');
+        });
+      }
+
+      var accountForm = document.getElementById('account-profile-form');
+      var accountSubmitBtn = document.getElementById('account-profile-submit');
+      var profileErrorEl = document.getElementById('account-profile-error');
+      var IS_SERVERLESS_ACCOUNT = document.documentElement.dataset.serverless === '1';
+
+      function accountCsrfToken() {
+        var input = accountForm && accountForm.querySelector('[name="csrfmiddlewaretoken"]');
+        return input ? input.value : '';
+      }
+
+      function maxBodyBytesDataset() {
+        var raw = document.documentElement.dataset.maxRequestBodyBytes || '';
+        var n = parseInt(raw, 10);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      }
+
+      function maxAvatarBlobBytes() {
+        var cap = maxBodyBytesDataset();
+        var ceiling = cap ? Math.floor(cap * 0.75) : 3 * 1024 * 1024;
+        return Math.min(950000, ceiling);
+      }
+
+      function profilePayloadTooLargeMessage() {
+        var cap = maxBodyBytesDataset();
+        var hint = cap
+          ? ' Keep each save under about ' + (cap / (1024 * 1024)).toFixed(1) + ' MB on this host (photos are resized automatically—try another file if this persists).'
+          : ' This host limits how large each request can be.';
+        return 'This photo could not be uploaded because the request was too large.' + hint;
+      }
+
+      function loadImageFromFile(file) {
+        return new Promise(function (resolve, reject) {
+          var url = URL.createObjectURL(file);
+          var img = new Image();
+          img.onload = function () {
+            URL.revokeObjectURL(url);
+            resolve(img);
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+            reject(new Error('Could not read that image.'));
+          };
+          img.src = url;
+        });
+      }
+
+      function canvasToJpegBlob(canvas, quality) {
+        return new Promise(function (resolve) {
+          if (canvas.toBlob) {
+            canvas.toBlob(function (blob) {
+              resolve(blob);
+            }, 'image/jpeg', quality);
+          } else {
+            var data = canvas.toDataURL('image/jpeg', quality);
+            var parts = data.split(',');
+            var bin = atob(parts[1] || '');
+            var arr = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            resolve(new Blob([arr], { type: 'image/jpeg' }));
+          }
+        });
+      }
+
+      async function compressAvatarToBlob(file, maxBytes) {
+        var img = await loadImageFromFile(file);
+        var w = img.naturalWidth || img.width;
+        var h = img.naturalHeight || img.height;
+        if (!w || !h) throw new Error('Invalid image dimensions.');
+        var maxDim = 512;
+        var scale = Math.min(1, maxDim / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * scale));
+        var ch = Math.max(1, Math.round(h * scale));
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var qualities = [0.88, 0.78, 0.68, 0.58, 0.48, 0.38, 0.28];
+        var attempts = 0;
+        while (attempts < 8 && scale >= 0.12) {
+          canvas.width = cw;
+          canvas.height = ch;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, cw, ch);
+          ctx.drawImage(img, 0, 0, cw, ch);
+          for (var qi = 0; qi < qualities.length; qi++) {
+            var blob = await canvasToJpegBlob(canvas, qualities[qi]);
+            if (blob && blob.size <= maxBytes) return blob;
+          }
+          scale *= 0.82;
+          cw = Math.max(48, Math.round(w * scale));
+          ch = Math.max(48, Math.round(h * scale));
+          attempts++;
+        }
+        throw new Error('Could not shrink the photo enough. Try another image.');
+      }
+
+      var accountProfileSaving = false;
+      if (accountForm && accountSubmitBtn && IS_SERVERLESS_ACCOUNT) {
+        accountForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          if (accountProfileSaving) return;
+          accountProfileSaving = true;
+          if (profileErrorEl) {
+            profileErrorEl.textContent = '';
+            profileErrorEl.classList.add('hidden');
+          }
+          accountSubmitBtn.disabled = true;
+          var prevLabel = accountSubmitBtn.textContent;
+          accountSubmitBtn.textContent = 'Saving…';
+          try {
+            var fd = new FormData(accountForm);
+            var avatarIn = document.getElementById('account-avatar-input');
+            var pic = avatarIn && avatarIn.files && avatarIn.files[0];
+            var maxB = maxAvatarBlobBytes();
+            if (pic && /^image\//.test(pic.type)) {
+              var heavyJpeg = pic.type === 'image/jpeg' && pic.size > 380000;
+              if (pic.size > maxB || pic.type !== 'image/jpeg' || heavyJpeg) {
+                var jpegBlob = await compressAvatarToBlob(pic, maxB);
+                fd.delete('avatar');
+                fd.append('avatar', jpegBlob, 'avatar.jpg');
+              }
+            }
+            var res = await fetch(accountForm.action, {
+              method: 'POST',
+              body: fd,
+              credentials: 'same-origin',
+              redirect: 'manual',
+              headers: { 'X-CSRFToken': accountCsrfToken() },
+            });
+            if (res.status >= 300 && res.status < 400) {
+              var loc = res.headers.get('Location');
+              window.location.href = loc || '{% url "dashboard" %}';
+              return;
+            }
+            if (res.status === 413) throw new Error(profilePayloadTooLargeMessage());
+            if (!res.ok) {
+              var t = await res.text();
+              var low = (t || '').slice(0, 600).toLowerCase();
+              if (
+                low.includes('payload too large') ||
+                low.includes('413') ||
+                low.includes('function_payload_too_large')
+              ) {
+                throw new Error(profilePayloadTooLargeMessage());
+              }
+              if (res.status === 403) {
+                throw new Error('Session expired or blocked. Refresh the page and try again.');
+              }
+              throw new Error('Could not save your profile. Try again or use a smaller photo.');
+            }
+            window.location.reload();
+          } catch (err) {
+            var msg = err && err.message ? err.message : 'Something went wrong.';
+            if (profileErrorEl) {
+              profileErrorEl.textContent = msg;
+              profileErrorEl.classList.remove('hidden');
+            }
+            if (typeof window.ZentrolDashboardToast === 'function') {
+              window.ZentrolDashboardToast(msg, { error: true });
+            }
+          } finally {
+            accountProfileSaving = false;
+            accountSubmitBtn.disabled = false;
+            accountSubmitBtn.textContent = prevLabel;
+          }
         });
       }
       computePreview();
