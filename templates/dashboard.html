@@ -693,6 +693,11 @@
             Tip: this host accepts saves up to about <strong>{{ dashboard_max_request_body_bytes|filesizeformat }}</strong> per upload (request size limit). Images and many slides grow the payload—compress media or split the deck if saving fails.
           </p>
           {% endif %}
+          {% if IS_SERVERLESS %}
+          <p class="mt-2 text-[11px] leading-snug text-ink2">
+            On this deployment, slide thumbnails are drawn in your browser from the .pptx structure—fonts and layout may differ slightly from PowerPoint. Self-hosted installs can use LibreOffice for a closer match.
+          </p>
+          {% endif %}
         </section>
       </div>
     </header>
