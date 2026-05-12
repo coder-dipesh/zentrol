@@ -1040,6 +1040,11 @@
 
   <input id="file-input" type="file" accept=".pptx,.ppt" class="hidden" />
 
+  {% if IS_SERVERLESS %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
+  <script src="{% static 'js/pptx_loader.js' %}"></script>
+  {% endif %}
+
   <div id="dash-toast" class="pointer-events-none fixed bottom-6 left-1/2 z-[60] hidden max-w-[min(92vw,22rem)] -translate-x-1/2" role="status" aria-live="polite">
     <div id="dash-toast-inner" class="surface px-4 py-3 text-center text-sm font-medium leading-snug text-ink shadow-[0_8px_32px_-12px_rgba(27,26,24,0.35)]">
       <span id="dash-toast-text"></span>
@@ -1056,6 +1061,7 @@
     const pctEl = document.getElementById('upload-progress-pct');
     const barEl = document.getElementById('upload-progress-bar');
     const errorEl = document.getElementById('upload-error-text');
+    const IS_SERVERLESS = {{ IS_SERVERLESS|yesno:"true,false" }};
     const dashToast = document.getElementById('dash-toast');
     const dashToastInner = document.getElementById('dash-toast-inner');
     const dashToastText = document.getElementById('dash-toast-text');
@@ -1458,29 +1464,78 @@
       barEl.style.width = '0%';
 
       try {
-        labelEl.textContent = 'Uploading presentation…';
-        pctEl.textContent = '35%';
-        barEl.style.width = '35%';
+        if (IS_SERVERLESS) {
+          const lowerName = (file.name || '').toLowerCase();
+          if (!lowerName.endsWith('.pptx')) {
+            throw new Error(
+              'This deployment only accepts .pptx (binary .ppt is unsupported here). Save as .pptx and try again.',
+            );
+          }
+          if (typeof JSZip === 'undefined' || typeof PptxLoader === 'undefined') {
+            throw new Error('Presentation scripts failed to load. Refresh the page and try again.');
+          }
+          labelEl.textContent = 'Parsing in your browser…';
+          pctEl.textContent = '5%';
+          barEl.style.width = '5%';
 
-        const formData = new FormData();
-        formData.append('presentation', file);
+          const loader = new PptxLoader({
+            onProgress: (pct, msg) => {
+              pctEl.textContent = `${pct}%`;
+              barEl.style.width = `${pct}%`;
+              if (msg) labelEl.textContent = msg;
+            },
+          });
+          const slides = await loader.load(file);
 
-        const response = await fetch("{% url 'upload_presentation' %}", {
-          method: 'POST',
-          headers: { 'X-CSRFToken': getCSRFToken() },
-          body: formData
-        });
+          labelEl.textContent = 'Saving…';
+          pctEl.textContent = '92%';
+          barEl.style.width = '92%';
 
-        labelEl.textContent = 'Rendering slides server-side…';
-        pctEl.textContent = '90%';
-        barEl.style.width = '90%';
+          const baseTitle = file.name.replace(/\.[^/.]+$/, '') || 'Untitled presentation';
+          const response = await fetch("{% url 'upload_presentation' %}", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCSRFToken(),
+            },
+            body: JSON.stringify({
+              slides,
+              source_filename: file.name,
+              title: baseTitle.slice(0, 255),
+            }),
+          });
 
-        const result = await response.json();
-        if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to save presentation');
-        labelEl.textContent = 'Completed';
-        pctEl.textContent = '100%';
-        barEl.style.width = '100%';
-        window.location.href = "{% url 'dashboard' %}";
+          const result = await response.json();
+          if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to save presentation');
+          labelEl.textContent = 'Completed';
+          pctEl.textContent = '100%';
+          barEl.style.width = '100%';
+          window.location.href = "{% url 'dashboard' %}";
+        } else {
+          labelEl.textContent = 'Uploading presentation…';
+          pctEl.textContent = '35%';
+          barEl.style.width = '35%';
+
+          const formData = new FormData();
+          formData.append('presentation', file);
+
+          const response = await fetch("{% url 'upload_presentation' %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRFToken() },
+            body: formData,
+          });
+
+          labelEl.textContent = 'Rendering slides server-side…';
+          pctEl.textContent = '90%';
+          barEl.style.width = '90%';
+
+          const result = await response.json();
+          if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to save presentation');
+          labelEl.textContent = 'Completed';
+          pctEl.textContent = '100%';
+          barEl.style.width = '100%';
+          window.location.href = "{% url 'dashboard' %}";
+        }
       } catch (err) {
         labelEl.textContent = 'Upload failed';
         errorEl.textContent = err.message;

@@ -230,7 +230,8 @@ STATICFILES_STORAGE = (
 )
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Serverless filesystem is read-only under BASE_DIR — uploads must use /tmp (ephemeral per instance).
+MEDIA_ROOT = Path('/tmp/zentrol_media') if IS_SERVERLESS else BASE_DIR / 'media'
 
 # Full URL to hero intro MP4 when not shipped from static (e.g. Supabase Storage public URL on Vercel).
 HERO_INTRO_VIDEO_URL = env('HERO_INTRO_VIDEO_URL', default='').strip()

@@ -34,3 +34,6 @@ if settings.DEBUG or getattr(settings, 'SPECTACULAR_PUBLIC', False):
 if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+elif getattr(settings, 'IS_SERVERLESS', False):
+    # No nginx/S3 in front — serve uploaded slides from writable MEDIA_ROOT (/tmp on Vercel).
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

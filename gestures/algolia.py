@@ -31,11 +31,30 @@ logger = logging.getLogger(__name__)
 # isn't installed and Algolia is disabled.
 _client = None
 _index = None
+_sdk_installed: bool | None = None
+
+
+def _probe_sdk() -> bool:
+    """Return True if ``algoliasearch`` is installed (slim vs full dependency trees)."""
+    global _sdk_installed
+    if _sdk_installed is None:
+        try:
+            import algoliasearch  # noqa: F401
+            _sdk_installed = True
+        except ImportError:
+            _sdk_installed = False
+            logger.warning(
+                'ALGOLIA_* is set but ``algoliasearch`` is not installed — '
+                'skipping index sync. Install algoliasearch or unset Algolia env vars.'
+            )
+    return _sdk_installed
 
 
 def is_enabled() -> bool:
-    """Return True when Algolia is configured and ready to use."""
-    return bool(getattr(settings, 'ALGOLIA_ENABLED', False))
+    """Return True when Algolia is configured *and* the Python client imports cleanly."""
+    if not bool(getattr(settings, 'ALGOLIA_ENABLED', False)):
+        return False
+    return _probe_sdk()
 
 
 def _get_client():
