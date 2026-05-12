@@ -249,6 +249,14 @@ LOGOUT_REDIRECT_URL = 'home'
 DATA_UPLOAD_MAX_MEMORY_SIZE = env.int('DATA_UPLOAD_MAX_MEMORY_SIZE', default=50 * 1024 * 1024)  # 50 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = env.int('FILE_UPLOAD_MAX_MEMORY_SIZE', default=50 * 1024 * 1024)  # 50 MB
 
+# Serverless edge/runtime often caps total request body (~4.5 MB on Vercel). JSON slide payloads
+# can exceed the source .pptx size (data URLs). Dashboard uses this for hints + client pre-checks.
+SERVERLESS_MAX_REQUEST_BODY_BYTES = (
+    env.int('SERVERLESS_MAX_REQUEST_BODY_BYTES', default=4 * 1024 * 1024)
+    if IS_SERVERLESS
+    else None
+)
+
 # Browser clients allowed to call the API (same-origin Django pages + any extra dev origins).
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:8000',
