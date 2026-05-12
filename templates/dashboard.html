@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-serverless="{% if IS_SERVERLESS %}1{% else %}0{% endif %}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -1061,7 +1061,7 @@
     const pctEl = document.getElementById('upload-progress-pct');
     const barEl = document.getElementById('upload-progress-bar');
     const errorEl = document.getElementById('upload-error-text');
-    const IS_SERVERLESS = {{ IS_SERVERLESS|yesno:"true,false" }};
+    const IS_SERVERLESS = document.documentElement.dataset.serverless === '1';
     const dashToast = document.getElementById('dash-toast');
     const dashToastInner = document.getElementById('dash-toast-inner');
     const dashToastText = document.getElementById('dash-toast-text');
