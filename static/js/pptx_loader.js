@@ -1,7 +1,8 @@
 /**
  * PptxLoader — Client-side PPTX Parser for Zentrol
  * Extracts slide text and renders slides as images entirely in the browser.
- * No server upload. No external API. Pure JS.
+ * Layout is approximate (canvas + OOXML positions): not identical to PowerPoint.
+ * Local Docker/VM uploads use LibreOffice+PDF for pixel-accurate slides.
  *
  * Dependencies: JSZip (loaded via CDN)
  * @version 1.0.0
@@ -18,6 +19,9 @@ class PptxLoader {
         this.slides = [];       // [{imageUrl, text, notes}]
         this.fileName = '';
         this.isLoaded = false;
+        /** Native slide size from ppt/presentation.xml (EMU). Defaults to 16:9. */
+        this.slideCxEmu = 9144000;
+        this.slideCyEmu = 5143500;
     }
 
     // -------------------------------------------------------------------------
@@ -47,6 +51,8 @@ class PptxLoader {
 
         this._progress(15, 'Unzipping PPTX…');
         const zip = await this._unzip(arrayBuffer);
+
+        await this._readSlideDimensions(zip);
 
         this._progress(25, 'Parsing slide structure…');
         const slideCount = this._countSlides(zip);
@@ -111,6 +117,54 @@ class PptxLoader {
             throw new Error('JSZip is not loaded. Please include it before pptx_loader.js.');
         }
         return await JSZip.loadAsync(arrayBuffer);
+    }
+
+    /**
+     * Read slide width/height in EMU from presentation.xml (varies 16:9, 4:3, widescreen).
+     * Wrong defaults distort text and clip pictures vs PowerPoint.
+     */
+    async _readSlideDimensions(zip) {
+        this.slideCxEmu = 9144000;
+        this.slideCyEmu = 5143500;
+        const presFile = zip.files['ppt/presentation.xml'];
+        if (!presFile) return;
+        try {
+            const xmlStr = await presFile.async('string');
+            const doc = new DOMParser().parseFromString(xmlStr, 'text/xml');
+            const elements = doc.getElementsByTagName('*');
+            for (let i = 0; i < elements.length; i++) {
+                const el = elements[i];
+                if (el.localName === 'sldSz') {
+                    const cx = parseInt(el.getAttribute('cx'), 10);
+                    const cy = parseInt(el.getAttribute('cy'), 10);
+                    if (cx > 0 && cy > 0) {
+                        this.slideCxEmu = cx;
+                        this.slideCyEmu = cy;
+                    }
+                    break;
+                }
+            }
+        } catch (e) {
+            this._log('warn', `Slide dimensions fallback: ${e.message}`);
+        }
+    }
+
+    /**
+     * Scale picture draw rect so it fits in the canvas (avoids clipped logos at bottom).
+     * @returns {{dx:number,dy:number,dw:number,dh:number}|null}
+     */
+    _clampImageRect(canvasW, canvasH, x, y, w, h) {
+        let dx = Math.round(x);
+        let dy = Math.round(y);
+        let dw = Math.round(w);
+        let dh = Math.round(h);
+        if (!Number.isFinite(dw) || !Number.isFinite(dh) || dw <= 0 || dh <= 0) return null;
+        if (dx >= canvasW || dy >= canvasH) return null;
+        const scale = Math.min(1, (canvasW - dx) / dw, (canvasH - dy) / dh);
+        dw = Math.round(dw * scale);
+        dh = Math.round(dh * scale);
+        if (dw < 2 || dh < 2) return null;
+        return { dx, dy, dw, dh };
     }
 
     // -------------------------------------------------------------------------
@@ -196,13 +250,19 @@ class PptxLoader {
         // Try to extract background color
         const bgColor = this._extractBgColor(xmlStr);
 
-        // Try to extract embedded images
-        const images = await this._extractSlideImages(zip, slideNumber, xmlStr);
+        const canvasW = 960;
+        const canvasH = Math.max(
+            360,
+            Math.round((canvasW * this.slideCyEmu) / this.slideCxEmu),
+        );
+
+        // Try to extract embedded images (coordinates match slide aspect ratio)
+        const images = await this._extractSlideImages(zip, slideNumber, xmlStr, canvasW, canvasH);
 
         // Render to canvas
         const canvas = document.createElement('canvas');
-        canvas.width = 960;
-        canvas.height = 540;
+        canvas.width = canvasW;
+        canvas.height = canvasH;
         const ctx = canvas.getContext('2d');
 
         // Background
@@ -229,10 +289,12 @@ class PptxLoader {
         // Parse and draw text shapes
         await this._drawTextShapes(ctx, xmlStr, canvas.width, canvas.height);
 
-        // Draw inline images
+        // Draw inline images (scale down if OOXML box overflows canvas — fixes clipped logos)
         for (const img of images.inline) {
             try {
-                await this._drawImage(ctx, img.data, img.x, img.y, img.w, img.h);
+                const box = this._clampImageRect(canvas.width, canvas.height, img.x, img.y, img.w, img.h);
+                if (!box) continue;
+                await this._drawImage(ctx, img.data, box.dx, box.dy, box.dw, box.dh);
             } catch (e) { /* skip */ }
         }
 
@@ -249,7 +311,7 @@ class PptxLoader {
         return null;
     }
 
-    async _extractSlideImages(zip, slideNumber, xmlStr) {
+    async _extractSlideImages(zip, slideNumber, xmlStr, canvasW, canvasH) {
         const result = { background: null, inline: [] };
 
         try {
@@ -298,12 +360,7 @@ class PptxLoader {
             }
 
             // Inline images (pic elements)
-            const pics = slideDoc.getElementsByTagNameNS(
-                'http://schemas.openxmlformats.org/presentationml/2006/main', 'pic'
-            );
-
             // Also check drawing namespace
-            const drawingNS = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing';
             const allPics = [
                 ...Array.from(slideDoc.getElementsByTagName('p:pic')),
                 ...Array.from(slideDoc.getElementsByTagName('pic:pic'))
@@ -327,7 +384,7 @@ class PptxLoader {
                                  'http://schemas.openxmlformats.org/drawingml/2006/main', 'xfrm'
                              )[0];
 
-                let x = 0, y = 0, w = 960, h = 540;
+                let x = 0, y = 0, w = canvasW, h = canvasH;
                 if (xfrm) {
                     const off = xfrm.querySelector('off') ||
                                xfrm.getElementsByTagNameNS(
@@ -339,13 +396,16 @@ class PptxLoader {
                                )[0];
 
                     if (off) {
-                        // EMU units: 1 inch = 914400 EMU, slide = 9144000 x 5143500 EMU
-                        x = Math.round((parseInt(off.getAttribute('x')) / 9144000) * 960);
-                        y = Math.round((parseInt(off.getAttribute('y')) / 5143500) * 540);
+                        const ox = parseInt(off.getAttribute('x'), 10) || 0;
+                        const oy = parseInt(off.getAttribute('y'), 10) || 0;
+                        x = Math.round((ox / this.slideCxEmu) * canvasW);
+                        y = Math.round((oy / this.slideCyEmu) * canvasH);
                     }
                     if (ext) {
-                        w = Math.round((parseInt(ext.getAttribute('cx')) / 9144000) * 960);
-                        h = Math.round((parseInt(ext.getAttribute('cy')) / 5143500) * 540);
+                        const cx = parseInt(ext.getAttribute('cx'), 10) || this.slideCxEmu;
+                        const cy = parseInt(ext.getAttribute('cy'), 10) || this.slideCyEmu;
+                        w = Math.round((cx / this.slideCxEmu) * canvasW);
+                        h = Math.round((cy / this.slideCyEmu) * canvasH);
                     }
                 }
 
@@ -391,12 +451,16 @@ class PptxLoader {
                 )[0];
 
                 if (off) {
-                    sx = Math.round((parseInt(off.getAttribute('x') || 0) / 9144000) * canvasW);
-                    sy = Math.round((parseInt(off.getAttribute('y') || 0) / 5143500) * canvasH);
+                    const ox = parseInt(off.getAttribute('x') || 0, 10) || 0;
+                    const oy = parseInt(off.getAttribute('y') || 0, 10) || 0;
+                    sx = Math.round((ox / this.slideCxEmu) * canvasW);
+                    sy = Math.round((oy / this.slideCyEmu) * canvasH);
                 }
                 if (ext) {
-                    sw = Math.round((parseInt(ext.getAttribute('cx') || 9144000) / 9144000) * canvasW);
-                    sh = Math.round((parseInt(ext.getAttribute('cy') || 5143500) / 5143500) * canvasH);
+                    const cx = parseInt(ext.getAttribute('cx') || String(this.slideCxEmu), 10) || this.slideCxEmu;
+                    const cy = parseInt(ext.getAttribute('cy') || String(this.slideCyEmu), 10) || this.slideCyEmu;
+                    sw = Math.round((cx / this.slideCxEmu) * canvasW);
+                    sh = Math.round((cy / this.slideCyEmu) * canvasH);
                 }
             }
 

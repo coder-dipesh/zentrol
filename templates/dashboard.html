@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-serverless="{% if IS_SERVERLESS %}1{% else %}0{% endif %}">
+<html lang="en" data-serverless="{% if IS_SERVERLESS %}1{% else %}0{% endif %}"{% if dashboard_max_request_body_bytes %} data-max-request-body-bytes="{{ dashboard_max_request_body_bytes }}"{% endif %}>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -688,6 +688,16 @@
             <div id="upload-progress-bar" class="h-full w-0 rounded-full"></div>
           </div>
           <p id="upload-error-text" class="mt-2 hidden text-sm text-red-600"></p>
+          {% if dashboard_max_request_body_bytes %}
+          <p class="mt-3 text-[11px] leading-snug text-ink2">
+            Tip: this host accepts saves up to about <strong>{{ dashboard_max_request_body_bytes|filesizeformat }}</strong> per upload (request size limit). Images and many slides grow the payload—compress media or split the deck if saving fails.
+          </p>
+          {% endif %}
+          {% if IS_SERVERLESS %}
+          <p class="mt-2 text-[11px] leading-snug text-ink2">
+            On this deployment, slide thumbnails are drawn in your browser from the .pptx structure—fonts and layout may differ slightly from PowerPoint. Self-hosted installs can use LibreOffice for a closer match.
+          </p>
+          {% endif %}
         </section>
       </div>
     </header>
@@ -1102,6 +1112,50 @@
       return '';
     }
 
+    function maxRequestBodyBytes() {
+      const raw = document.documentElement.dataset.maxRequestBodyBytes || '';
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    }
+
+    function mbRough(bytes) {
+      return (bytes / (1024 * 1024)).toFixed(1);
+    }
+
+    async function readUploadJsonResponse(response) {
+      const text = await response.text();
+      const trimmed = (text || '').trim();
+      if (!trimmed) {
+        return {
+          ok: response.ok,
+          error: response.ok ? undefined : `Empty response (${response.status}).`,
+        };
+      }
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        const snippet = trimmed.slice(0, 320).toLowerCase();
+        const tooLarge =
+          response.status === 413 ||
+          snippet.includes('request entity too large') ||
+          snippet.includes('payload too large') ||
+          snippet.includes('body exceeded') ||
+          snippet.includes('request body exceeded');
+        if (tooLarge) {
+          const cap = maxRequestBodyBytes();
+          const hint = cap
+            ? ` Save must stay under about ${mbRough(cap)} MB on this host. Try fewer slides or smaller images.`
+            : ' The rendered deck may exceed this host’s request size limit.';
+          return { ok: false, error: 'Upload too large.' + hint };
+        }
+        return {
+          ok: false,
+          error:
+            'Could not save the presentation. If it is large, compress images or split the deck.',
+        };
+      }
+    }
+
     function openFilePicker() {
       fileInput.click();
     }
@@ -1474,6 +1528,12 @@
           if (typeof JSZip === 'undefined' || typeof PptxLoader === 'undefined') {
             throw new Error('Presentation scripts failed to load. Refresh the page and try again.');
           }
+          const bodyCap = maxRequestBodyBytes();
+          if (bodyCap && file.size > bodyCap) {
+            throw new Error(
+              `This .pptx is over about ${mbRough(bodyCap)} MB. This host limits upload size—choose a smaller file or compress images.`,
+            );
+          }
           labelEl.textContent = 'Parsing in your browser…';
           pctEl.textContent = '5%';
           barEl.style.width = '5%';
@@ -1492,26 +1552,40 @@
           barEl.style.width = '92%';
 
           const baseTitle = file.name.replace(/\.[^/.]+$/, '') || 'Untitled presentation';
+          const payload = {
+            slides,
+            source_filename: file.name,
+            title: baseTitle.slice(0, 255),
+          };
+          const payloadStr = JSON.stringify(payload);
+          if (bodyCap && payloadStr.length > bodyCap) {
+            throw new Error(
+              `Rendered deck is about ${mbRough(payloadStr.length)} MB but this host allows roughly ${mbRough(bodyCap)} MB per save. Remove heavy images, fewer slides, or split the deck.`,
+            );
+          }
+
           const response = await fetch("{% url 'upload_presentation' %}", {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'X-CSRFToken': getCSRFToken(),
             },
-            body: JSON.stringify({
-              slides,
-              source_filename: file.name,
-              title: baseTitle.slice(0, 255),
-            }),
+            body: payloadStr,
           });
 
-          const result = await response.json();
+          const result = await readUploadJsonResponse(response);
           if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to save presentation');
           labelEl.textContent = 'Completed';
           pctEl.textContent = '100%';
           barEl.style.width = '100%';
           window.location.href = "{% url 'dashboard' %}";
         } else {
+          const bodyCap = maxRequestBodyBytes();
+          if (bodyCap && file.size > bodyCap) {
+            throw new Error(
+              `This file is over about ${mbRough(bodyCap)} MB. This host limits upload size—choose a smaller file.`,
+            );
+          }
           labelEl.textContent = 'Uploading presentation…';
           pctEl.textContent = '35%';
           barEl.style.width = '35%';
@@ -1529,7 +1603,7 @@
           pctEl.textContent = '90%';
           barEl.style.width = '90%';
 
-          const result = await response.json();
+          const result = await readUploadJsonResponse(response);
           if (!response.ok || !result.ok) throw new Error(result.error || 'Failed to save presentation');
           labelEl.textContent = 'Completed';
           pctEl.textContent = '100%';
